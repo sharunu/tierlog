@@ -323,7 +323,7 @@ export function OpponentDeckManager({
       console.error(e);
       alert("操作に失敗しました");
     }
-  }, [format]);
+  }, [format, game]);
 
   // Load stats when switching to auto mode
   useEffect(() => {

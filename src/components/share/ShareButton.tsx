@@ -3,7 +3,12 @@
 import { useState } from "react";
 import { Share2, Lock, X as CloseIcon } from "lucide-react";
 import Link from "next/link";
-import { ShareModal } from "./ShareModal";
+import dynamic from "next/dynamic";
+
+const ShareModal = dynamic(
+  () => import("./ShareModal").then((m) => ({ default: m.ShareModal })),
+  { ssr: false }
+);
 
 export type StatsShareData = {
   totalWins: number;
