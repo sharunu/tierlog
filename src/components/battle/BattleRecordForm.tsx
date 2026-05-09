@@ -99,7 +99,7 @@ export function BattleRecordForm({
     if (measureSince !== null) {
       getMiniStats(format, measureSince, game).then(setMiniStats);
     }
-  }, [measureSince, format]);
+  }, [measureSince, format, game]);
 
   // Sync miniStats when props change (e.g. format switch) - only if no custom interval
   useEffect(() => {
@@ -147,7 +147,7 @@ export function BattleRecordForm({
       setShowMemo(false);
       setOpponentMemo("");
     }
-  }, [opponentDeck]);
+  }, [opponentDeck, game]);
 
   const handleSubmit = async (result: BattleResult) => {
     const { deckId, tuningId } = parseDeckSelection(selectedValue);

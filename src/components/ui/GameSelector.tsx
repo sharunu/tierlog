@@ -37,6 +37,7 @@ export function GameSelector({ currentGame, size = "large", hrefFor }: Props) {
     if (slug === currentGame) return;
     try {
       window.localStorage.setItem("selectedGame", slug);
+      // eslint-disable-next-line react-hooks/immutability
       document.cookie = `selectedGame=${slug}; path=/; max-age=31536000; samesite=lax`;
     } catch {
       // ignore
