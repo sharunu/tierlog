@@ -267,7 +267,7 @@ export function BattleRecordForm({
           <div className="flex items-center justify-between mb-2">
             <p className="text-[12px] text-gray-500">使用デッキ</p>
             <a
-              href="/decks"
+              href={`/${game}/decks`}
               className="flex items-center gap-0.5 text-[12px]"
               style={{ color: "#8888aa" }}
             >

@@ -170,7 +170,7 @@ export default function DeckDetailPage() {
             p.set("scope", backScope);
             p.set("start", startDate);
             p.set("end", endDate);
-            router.push("/stats?" + p.toString());
+            router.push("/dm/stats?" + p.toString());
           }}
           className="text-sm text-primary hover:underline flex items-center gap-1"
         >
