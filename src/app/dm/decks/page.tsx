@@ -35,7 +35,7 @@ export default function DecksPage() {
     <>
       <div className="min-h-screen pb-20 px-4 pt-6 max-w-lg mx-auto">
         <button
-          onClick={() => router.push("/battle")}
+          onClick={() => router.push("/dm/battle")}
           className="text-sm text-primary hover:underline flex items-center gap-1 mb-3"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
