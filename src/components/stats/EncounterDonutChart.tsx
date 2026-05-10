@@ -2,7 +2,8 @@
 
 import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
-import { getWinRateColor, COLORS } from "@/lib/stats-utils";
+import { getWinRateColor } from "@/lib/stats-utils";
+import { colorForArchetype } from "@/lib/deck-archetype-colors";
 import {
   displayDeckName,
   type OpponentDeckNameMap,
@@ -27,10 +28,8 @@ interface Props {
   game: string;
 }
 
-const OTHER_COLOR = "#64748b";
 const RADIAN = Math.PI / 180;
 
-// Stable label renderer — no activeIndex dependency
 const renderLabel = (props: any) => {
   const { cx, cy, midAngle, innerRadius, outerRadius, pct } = props;
   const radius = (innerRadius + outerRadius) / 2;
@@ -53,7 +52,7 @@ const renderLabel = (props: any) => {
 
 export function EncounterDonutChart({ items, otherBreakdown, overallWinRate, overallWins, overallLosses, overallDraws, overallTotal, opponentDeckNameMap, game }: Props) {
   const display = (name: string) =>
-    name === "\u305D\u306E\u4ED6" ? name : displayDeckName(name, opponentDeckNameMap);
+    name === "その他" ? name : displayDeckName(name, opponentDeckNameMap);
   const [activeIndex, setActiveIndex] = useState<number>(-1);
   const [animationDone, setAnimationDone] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -64,13 +63,10 @@ export function EncounterDonutChart({ items, otherBreakdown, overallWinRate, ove
   const innerRadius = 55;
   const outerRadius = 80;
 
-  // Mirror activeIndex to ref for native event handlers
   useEffect(() => { activeIndexRef.current = activeIndex; }, [activeIndex]);
 
-  // Reset expansion when items change
   useEffect(() => { setOtherExpanded(false); }, [items]);
 
-  // Sort: "その他" always last in both chart and legend
   const data = useMemo(() =>
     items
       .map((item) => ({
@@ -79,13 +75,12 @@ export function EncounterDonutChart({ items, otherBreakdown, overallWinRate, ove
         pct: overallTotal > 0 ? Math.round((item.total / overallTotal) * 100) : 0,
       }))
       .sort((a, b) => {
-        if (a.name === "\u305D\u306E\u4ED6") return 1;
-        if (b.name === "\u305D\u306E\u4ED6") return -1;
+        if (a.name === "その他") return 1;
+        if (b.name === "その他") return -1;
         return b.value - a.value;
       }),
   [items, overallTotal]);
 
-  // Sorted breakdown for expansion display
   const sortedBreakdown = useMemo(() => {
     if (!otherBreakdown || otherBreakdown.length === 0) return [];
     return [...otherBreakdown]
@@ -100,7 +95,6 @@ export function EncounterDonutChart({ items, otherBreakdown, overallWinRate, ove
 
   const winRateColor = getWinRateColor(overallWinRate);
 
-  // Calculate chart center on mount/resize
   useEffect(() => {
     const updateCenter = () => {
       if (containerRef.current) {
@@ -113,7 +107,6 @@ export function EncounterDonutChart({ items, otherBreakdown, overallWinRate, ove
     return () => window.removeEventListener("resize", updateCenter);
   }, []);
 
-  // Hit-test: determine which arc segment a point falls on
   const getArcIndexFromPoint = useCallback((clientX: number, clientY: number): number => {
     if (!containerRef.current || !chartCenter) return -1;
     const rect = containerRef.current.getBoundingClientRect();
@@ -137,7 +130,6 @@ export function EncounterDonutChart({ items, otherBreakdown, overallWinRate, ove
     return data.length - 1;
   }, [chartCenter, data, innerRadius, outerRadius]);
 
-  // Touch handlers
   const handleTouchStart = useCallback((e: TouchEvent) => {
     const touch = e.touches[0];
     const idx = getArcIndexFromPoint(touch.clientX, touch.clientY);
@@ -164,7 +156,6 @@ export function EncounterDonutChart({ items, otherBreakdown, overallWinRate, ove
     setActiveIndex(-1);
   }, []);
 
-  // Register native touch listeners (passive: false for preventDefault)
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -178,7 +169,6 @@ export function EncounterDonutChart({ items, otherBreakdown, overallWinRate, ove
     };
   }, [handleTouchStart, handleTouchMove, handleTouchEnd]);
 
-  // Calculate deck name overlay position from active segment
   const getOverlayPosition = useCallback(() => {
     if (activeIndex < 0 || !chartCenter) return null;
 
@@ -201,9 +191,7 @@ export function EncounterDonutChart({ items, otherBreakdown, overallWinRate, ove
 
   const overlayPos = getOverlayPosition();
 
-  // Color assignment: "その他" gets a fixed color
-  const getColor = (name: string, index: number) =>
-    name === "\u305D\u306E\u4ED6" ? OTHER_COLOR : COLORS[index % COLORS.length];
+  const getColor = (name: string) => colorForArchetype(name);
 
   return (
     <div className="space-y-3">
@@ -216,6 +204,8 @@ export function EncounterDonutChart({ items, otherBreakdown, overallWinRate, ove
           WebkitTapHighlightColor: "transparent",
           userSelect: "none",
         }}
+        role="img"
+        aria-label={`対面デッキ分布: 上位${data.length}デッキの構成比、総合勝率${overallWinRate === null ? "--" : `${overallWinRate}%`}、${overallTotal}件`}
       >
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
@@ -239,7 +229,7 @@ export function EncounterDonutChart({ items, otherBreakdown, overallWinRate, ove
               {data.map((entry, i) => (
                 <Cell
                   key={i}
-                  fill={getColor(entry.name, i)}
+                  fill={getColor(entry.name)}
                   opacity={activeIndex >= 0 && activeIndex !== i ? 0.35 : 1}
                   style={{ transition: "opacity 150ms" }}
                 />
@@ -248,7 +238,6 @@ export function EncounterDonutChart({ items, otherBreakdown, overallWinRate, ove
           </PieChart>
         </ResponsiveContainer>
 
-        {/* Center stats */}
         <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
           <div className="flex items-baseline gap-1">
             <span className="text-sm text-muted-foreground">勝率</span>
@@ -257,7 +246,6 @@ export function EncounterDonutChart({ items, otherBreakdown, overallWinRate, ove
           <span className="text-xs text-muted-foreground">{formatWLTJa(overallWins, overallLosses, overallDraws, game)} / {overallTotal}件</span>
         </div>
 
-        {/* Deck name overlay */}
         {activeIndex >= 0 && overlayPos && (
           <div
             className="absolute pointer-events-none"
@@ -268,31 +256,25 @@ export function EncounterDonutChart({ items, otherBreakdown, overallWinRate, ove
               zIndex: 10,
             }}
           >
-            <span
-              className="text-xs font-medium whitespace-nowrap px-1.5 py-0.5 rounded"
-              style={{
-                backgroundColor: "rgba(0,0,0,0.7)",
-                color: "#fff",
-              }}
-            >
+            <span className="text-xs font-medium whitespace-nowrap px-1.5 py-0.5 rounded bg-black/70 text-white">
               {display(data[activeIndex].name)}
             </span>
           </div>
         )}
       </div>
 
-      {/* Legend with click support */}
       <div className="flex flex-wrap gap-x-4 gap-y-1 justify-center">
         {data.map((d, i) => {
-          const color = getColor(d.name, i);
-          const isOther = d.name === "\u305D\u306E\u4ED6";
+          const color = getColor(d.name);
+          const isOther = d.name === "その他";
           const hasBreakdown = isOther && otherBreakdown && otherBreakdown.length > 0;
           return (
             <div
               key={d.name}
-              className="flex items-center gap-1.5 text-xs cursor-pointer rounded px-1 py-0.5 transition-colors"
+              className={`flex items-center gap-1.5 text-xs cursor-pointer rounded px-1 py-0.5 transition-colors ${
+                activeIndex === i ? "bg-foreground/5" : ""
+              }`}
               style={{
-                backgroundColor: activeIndex === i ? "rgba(0,0,0,0.08)" : "transparent",
                 outline: activeIndex === i ? `2px solid ${color}` : "none",
                 outlineOffset: 1,
               }}
@@ -308,7 +290,7 @@ export function EncounterDonutChart({ items, otherBreakdown, overallWinRate, ove
               <div className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: color }} />
               <span className="text-muted-foreground">
                 {display(d.name)}
-                {hasBreakdown && <span className="ml-0.5 text-[10px]">{otherExpanded ? "\u25B2" : "\u25BC"}</span>}
+                {hasBreakdown && <span className="ml-0.5 text-[10px]">{otherExpanded ? "▲" : "▼"}</span>}
               </span>
               <span className="font-medium">{d.pct}%</span>
             </div>
@@ -316,10 +298,9 @@ export function EncounterDonutChart({ items, otherBreakdown, overallWinRate, ove
         })}
       </div>
 
-      {/* Other breakdown (expanded) */}
       {otherExpanded && sortedBreakdown.length > 0 && (
         <div className="rounded-lg border border-border bg-card/50 px-3 py-2">
-          <div className="text-[11px] text-muted-foreground mb-1.5">{"\u300C\u305D\u306E\u4ED6\u300D\u5185\u8A33"}</div>
+          <div className="text-[11px] text-muted-foreground mb-1.5">{"「その他」内訳"}</div>
           <div className="space-y-1">
             {sortedBreakdown.map((item) => (
               <div key={item.name} className="flex items-center justify-between text-xs">

@@ -27,6 +27,7 @@ import { getWinRateColor } from "@/lib/stats-utils";
 import { TurnOrderCards } from "@/components/stats/TurnOrderCards";
 import { ShareButton } from "@/components/share/ShareButton";
 import type { StatsShareData } from "@/components/share/ShareButton";
+import { FilterBar } from "@/components/stats/FilterBar";
 import { getUserStage, getAuthProvider, getXConnectionStatus } from "@/lib/actions/account-actions";
 import { getPremiumUiVisible } from "@/lib/actions/admin-actions";
 
@@ -257,10 +258,10 @@ function StatsPageInner() {
     if (loading) {
       return (
         <div className="space-y-4">
-          <div className="flex justify-center py-6"><div className="animate-pulse rounded-full bg-[#232640] h-[180px] w-[180px]" /></div>
-          <div className="animate-pulse rounded-[10px] bg-[#232640] h-[60px]" />
-          <div className="animate-pulse rounded-[10px] bg-[#232640] h-[60px]" />
-          <div className="animate-pulse rounded-[10px] bg-[#232640] h-[60px]" />
+          <div className="flex justify-center py-6"><div className="animate-pulse rounded-full bg-surface-2 h-[180px] w-[180px]" /></div>
+          <div className="animate-pulse rounded-[10px] bg-surface-2 h-[60px]" />
+          <div className="animate-pulse rounded-[10px] bg-surface-2 h-[60px]" />
+          <div className="animate-pulse rounded-[10px] bg-surface-2 h-[60px]" />
         </div>
       );
     }
@@ -457,17 +458,19 @@ function StatsPageInner() {
           </div>
         ) : (
           <>
-            <DateRangeCalendar
-              startDate={startDate}
-              endDate={endDate}
-              onRangeChange={handleRangeChange}
-              battleCounts={battleCounts}
-              onMonthChange={loadCounts}
-            />
-            <ScopeSelector scope={scope} setScope={setScope} teamEnabled={visibleTeams.length > 0} isGuest={isGuest} />
+            <FilterBar>
+              <DateRangeCalendar
+                startDate={startDate}
+                endDate={endDate}
+                onRangeChange={handleRangeChange}
+                battleCounts={battleCounts}
+                onMonthChange={loadCounts}
+              />
+              <ScopeSelector scope={scope} setScope={setScope} teamEnabled={visibleTeams.length > 0} isGuest={isGuest} />
+            </FilterBar>
             {isGuest && (
-              <div className="bg-[#232640] rounded-[8px] px-3 py-2.5 text-center" style={{ border: "0.5px solid rgba(100,100,150,0.2)" }}>
-                <p className="text-[11px] text-gray-400">全体統計やご意見・バグ報告は<a href="/auth" className="text-[#6366f1] underline ml-0.5">アカウント登録</a>するとご利用いただけます</p>
+              <div className="bg-surface-2 rounded-[8px] px-3 py-2.5 text-center border border-border-subtle">
+                <p className="text-[11px] text-muted-foreground">全体統計やご意見・バグ報告は<a href="/auth" className="text-primary underline ml-0.5">アカウント登録</a>するとご利用いただけます</p>
               </div>
             )}
             {scope === "global" && premiumUiVisible && (
@@ -479,7 +482,7 @@ function StatsPageInner() {
                     : "1px solid rgba(100, 100, 150, 0.2)",
                   background: userStage === 1
                     ? "linear-gradient(135deg, rgba(217, 170, 59, 0.08), rgba(180, 130, 30, 0.04))"
-                    : "#232640",
+                    : "var(--surface-2)",
                 }}
               >
                 <div className="flex items-center justify-between">
@@ -504,7 +507,7 @@ function StatsPageInner() {
                     onClick={() => userStage === 1 && setPremiumFilter(!premiumFilter)}
                     disabled={userStage !== 1}
                     className={`relative w-10 h-5 rounded-full transition-colors flex-shrink-0 ml-3 ${
-                      premiumFilter ? "bg-amber-500" : userStage === 1 ? "bg-[#333355]" : "bg-[#333355]"
+                      premiumFilter ? "bg-amber-500" : userStage === 1 ? "bg-muted" : "bg-muted"
                     } ${userStage !== 1 ? "opacity-40 cursor-not-allowed" : "cursor-pointer"}`}
                   >
                     <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white transition-all duration-200 ${

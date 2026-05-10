@@ -68,17 +68,16 @@ export function ShareButton({ type, data, xConnected = true }: Props) {
             title="シェアにはX連携が必要です"
             aria-label="シェア (X連携が必要)"
           >
-            <Share2 size={18} className="text-gray-500" />
+            <Share2 size={18} className="text-muted-foreground" />
             <Lock
               size={10}
-              className="absolute text-gray-300"
-              style={{ bottom: 4, right: 4, background: "#1a1d2e", borderRadius: 2, padding: 1 }}
+              className="absolute text-foreground bg-surface-1 rounded-sm p-px"
+              style={{ bottom: 4, right: 4 }}
             />
           </button>
           <Link
             href="/account"
-            className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-md bg-[#232640] text-gray-300 hover:bg-[#2a2d48] transition-colors"
-            style={{ border: "0.5px solid rgba(100,100,150,0.3)" }}
+            className="flex items-center gap-1 px-2 py-1 text-[11px] rounded-md bg-surface-2 text-foreground hover:bg-surface-3 transition-colors border border-border-subtle"
             title="アカウント設定でX連携"
           >
             <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
@@ -89,28 +88,24 @@ export function ShareButton({ type, data, xConnected = true }: Props) {
         </div>
         {showGate && (
           <div
-            className="fixed inset-0 z-[70] flex items-center justify-center"
-            style={{ backgroundColor: "rgba(0,0,0,0.6)" }}
+            className="fixed inset-0 z-[70] flex items-center justify-center bg-black/60"
             onClick={(e) => {
               if (e.target === e.currentTarget) setShowGate(false);
             }}
           >
-            <div
-              className="w-full max-w-sm mx-4 rounded-[12px] overflow-hidden"
-              style={{ backgroundColor: "#1a1d2e", border: "0.5px solid rgba(100,100,150,0.3)" }}
-            >
+            <div className="w-full max-w-sm mx-4 rounded-[12px] overflow-hidden bg-surface-1 border border-border-subtle">
               <div className="flex items-center justify-between px-5 py-4">
                 <h2 className="text-[15px] font-medium">シェア機能</h2>
                 <button
                   onClick={() => setShowGate(false)}
-                  className="text-gray-500 hover:text-gray-300"
+                  className="text-muted-foreground hover:text-foreground"
                   aria-label="閉じる"
                 >
                   <CloseIcon size={20} />
                 </button>
               </div>
               <div className="px-5 pb-4">
-                <p className="text-[13px] text-gray-300 leading-relaxed">
+                <p className="text-[13px] text-foreground leading-relaxed">
                   シェア機能はX連携済みのユーザーのみご利用いただけます。
                   <br />
                   アカウント設定からX連携すると、シェア機能が解放されます。
@@ -119,13 +114,13 @@ export function ShareButton({ type, data, xConnected = true }: Props) {
               <div className="px-5 pb-5 space-y-2">
                 <Link
                   href="/account"
-                  className="w-full bg-[#6366f1] text-white rounded-[10px] px-4 py-3 text-[14px] font-medium hover:opacity-90 flex items-center justify-center gap-2"
+                  className="w-full bg-primary text-primary-foreground rounded-[10px] px-4 py-3 text-[14px] font-medium hover:bg-primary/90 flex items-center justify-center gap-2"
                 >
                   アカウント設定へ
                 </Link>
                 <button
                   onClick={() => setShowGate(false)}
-                  className="w-full bg-transparent text-gray-400 rounded-[10px] px-4 py-3 text-[13px] font-medium hover:text-gray-200"
+                  className="w-full bg-transparent text-muted-foreground rounded-[10px] px-4 py-3 text-[13px] font-medium hover:text-foreground"
                 >
                   閉じる
                 </button>
@@ -141,10 +136,11 @@ export function ShareButton({ type, data, xConnected = true }: Props) {
     <>
       <button
         onClick={() => setIsOpen(true)}
-        className="p-2 rounded-lg hover:bg-[#232640] transition-colors"
+        aria-label="シェア"
+        className="p-2 rounded-lg hover:bg-surface-2 transition-colors"
         title="シェア"
       >
-        <Share2 size={18} className="text-gray-400" />
+        <Share2 size={18} className="text-muted-foreground" />
       </button>
       {isOpen && <ShareModal type={type} data={data} onClose={() => setIsOpen(false)} />}
     </>
