@@ -5,7 +5,10 @@ import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistration";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { BanGuard } from "@/components/providers/BanGuard";
+import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import "./globals.css";
+
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem('duepure-theme');var r;if(t==='light'||t==='dark'){r=t;}else if(t==='system'){r=window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';}else{r='dark';}document.documentElement.setAttribute('data-theme',r);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();`;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -67,13 +70,18 @@ export default function RootLayout({
   const cfBeaconToken = process.env.NEXT_PUBLIC_CF_BEACON_TOKEN;
 
   return (
-    <html lang="ja">
+    <html lang="ja" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ServiceWorkerRegistration />
-        <InstallPrompt />
-        <ErrorBoundary><BanGuard>{children}</BanGuard></ErrorBoundary>
+        <ThemeProvider>
+          <ServiceWorkerRegistration />
+          <InstallPrompt />
+          <ErrorBoundary><BanGuard>{children}</BanGuard></ErrorBoundary>
+        </ThemeProvider>
         {cfBeaconToken && (
           <Script
             strategy="afterInteractive"
