@@ -22,6 +22,7 @@ import { TrendChart } from "@/components/stats/TrendChart";
 import { TrendHeatmap } from "@/components/stats/TrendHeatmap";
 import { TeamServerCard } from "@/components/stats/TeamServerCard";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { PageShell } from "@/components/ui/PageShell";
 import { Crown, Lock } from "lucide-react";
 import { getWinRateColor } from "@/lib/stats-utils";
 import { TurnOrderCards } from "@/components/stats/TurnOrderCards";
@@ -401,7 +402,7 @@ function StatsPageInner() {
 
   return (
     <>
-      <div className="min-h-screen pb-20 px-4 pt-6 max-w-lg mx-auto space-y-4">
+      <PageShell maxWidth="wide">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <h1 className="text-xl font-bold">分析</h1>
@@ -531,7 +532,7 @@ function StatsPageInner() {
             {renderContent()}
           </>
         )}
-      </div>
+      </PageShell>
       <BottomNav />
     </>
   );
