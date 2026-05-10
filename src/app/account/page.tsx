@@ -8,6 +8,7 @@ import { getDisplayName, updateDisplayName, getAuthProvider, getEmail, getXConne
 import { submitFeedback } from "@/lib/actions/feedback-actions";
 import { checkIsAdmin, getPremiumUiVisible } from "@/lib/actions/admin-actions";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { LogOut } from "lucide-react";
 
 export default function AccountPage() {
@@ -349,6 +350,17 @@ export default function AccountPage() {
             </div>
           </div>
         )}
+
+        {/* 表示セクション */}
+        <div className="mt-5">
+          <p className="text-[12px] text-gray-500 mb-2">表示</p>
+          <div className="bg-surface-2 rounded-[10px] px-4 py-[14px]">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[14px]">テーマ</p>
+            </div>
+            <ThemeToggle />
+          </div>
+        </div>
 
         {/* その他セクション */}
         <div className="mt-5">
