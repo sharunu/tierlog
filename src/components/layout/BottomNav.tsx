@@ -3,62 +3,30 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Home, PlusCircle, BarChart3, User } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 import { DEFAULT_GAME, isGameSlug, resolveGameFromPath, type GameSlug } from "@/lib/games";
 
-function IconHome({ className }: { className?: string }) {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className={className}>
-      <path d="M3 10L10 3.5L17 10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-      <path d="M5 8.5V16.5H8.5V12.5H11.5V16.5H15V8.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
+type NavItem = {
+  suffix: string;
+  label: string;
+  Icon: LucideIcon;
+  ariaLabel: string;
+};
 
-function IconRecord({ className }: { className?: string }) {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className={className}>
-      <circle cx="10" cy="10" r="9" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M10 5.5V14.5M5.5 10H14.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconStats({ className }: { className?: string }) {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className={className}>
-      <path d="M4 16V10M8 16V7M12 16V4M16 16V8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function IconAccount({ className }: { className?: string }) {
-  return (
-    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" className={className}>
-      <circle cx="10" cy="7.5" r="3.5" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M3.5 17.5c0-3.5 2.9-6 6.5-6s6.5 2.5 6.5 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-/**
- * ゲームスコープ下のタブ。各リンクは現ゲームのスラッグを先頭に付与する。
- * /account は全ゲーム共通なのでスラッグ非依存。
- */
-const gameScopedItems = [
-  { suffix: "/home", label: "ホーム", Icon: IconHome },
-  { suffix: "/battle", label: "対戦記録", Icon: IconRecord },
-  { suffix: "/stats", label: "分析", Icon: IconStats },
+const gameScopedItems: NavItem[] = [
+  { suffix: "/home", label: "ホーム", Icon: Home, ariaLabel: "ホーム" },
+  { suffix: "/battle", label: "対戦記録", Icon: PlusCircle, ariaLabel: "対戦記録" },
+  { suffix: "/stats", label: "分析", Icon: BarChart3, ariaLabel: "分析" },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
-  // 現在のゲーム: パスから取れれば即確定（SSR/CSR 一致）、共有ページでは
-  // マウント後に cookie を読んで state を更新（hydration mismatch 回避）
   const fromPath = resolveGameFromPath(pathname);
   const [cookieGame, setCookieGame] = useState<GameSlug | null>(null);
 
   useEffect(() => {
-    if (fromPath) return; // URL で確定している場合は不要
+    if (fromPath) return;
     const match = document.cookie.match(/(?:^|; )selectedGame=([^;]+)/);
     if (match && isGameSlug(match[1])) {
       setCookieGame(match[1]);
@@ -66,49 +34,41 @@ export function BottomNav() {
   }, [fromPath]);
 
   const game: GameSlug = fromPath ?? cookieGame ?? DEFAULT_GAME;
+  const accountActive = pathname === "/account" || pathname?.startsWith("/account/") === true;
 
   return (
-    <nav
-      className="fixed bottom-0 left-0 right-0 safe-bottom z-50"
-      style={{
-        backgroundColor: "#181a2e",
-        borderTop: "0.5px solid rgba(100,100,150,0.25)",
-      }}
-    >
+    <nav className="fixed bottom-0 left-0 right-0 z-50 bg-surface-1 border-t border-border-subtle pb-[env(safe-area-inset-bottom)]">
       <div className="flex justify-around items-center h-[60px] max-w-lg mx-auto">
         {gameScopedItems.map((item) => {
           const href = `/${game}${item.suffix}`;
-          const isActive = pathname === href || pathname?.startsWith(href + "/");
+          const isActive = pathname === href || pathname?.startsWith(href + "/") === true;
           return (
             <Link
               key={item.suffix}
               href={href}
+              aria-label={item.ariaLabel}
+              aria-current={isActive ? "page" : undefined}
               className={`flex flex-col items-center justify-center min-w-[52px] min-h-[44px] transition-colors ${
-                isActive ? "text-[#818cf8] font-medium" : "text-gray-500 hover:text-gray-300"
+                isActive ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
               }`}
             >
-              <item.Icon />
+              <item.Icon size={20} strokeWidth={1.5} />
               <span className="text-[10px] mt-1">{item.label}</span>
-              {isActive && (
-                <span className="w-1 h-1 rounded-full bg-[#6366f1] mt-0.5" />
-              )}
+              {isActive && <span className="w-1 h-1 rounded-full bg-primary mt-0.5" />}
             </Link>
           );
         })}
-        {/* アカウントは全ゲーム共通 */}
         <Link
           href="/account"
+          aria-label="アカウント"
+          aria-current={accountActive ? "page" : undefined}
           className={`flex flex-col items-center justify-center min-w-[52px] min-h-[44px] transition-colors ${
-            pathname === "/account" || pathname?.startsWith("/account/")
-              ? "text-[#818cf8] font-medium"
-              : "text-gray-500 hover:text-gray-300"
+            accountActive ? "text-primary font-medium" : "text-muted-foreground hover:text-foreground"
           }`}
         >
-          <IconAccount />
+          <User size={20} strokeWidth={1.5} />
           <span className="text-[10px] mt-1">アカウント</span>
-          {(pathname === "/account" || pathname?.startsWith("/account/")) && (
-            <span className="w-1 h-1 rounded-full bg-[#6366f1] mt-0.5" />
-          )}
+          {accountActive && <span className="w-1 h-1 rounded-full bg-primary mt-0.5" />}
         </Link>
       </div>
     </nav>
