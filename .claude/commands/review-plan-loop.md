@@ -2,7 +2,7 @@
 description: plan ファイルを plan-critic に検証させ、機械的指摘は自動修正、判断要は AskUserQuestion で escalate しながら GO 到達まで最大 3 反復するオーケストレーター。Plan Mode 中は実行非推奨（plan ファイルへの Edit が必要）。メインセッションから実行すること（subagent 内では Agent spawn 不可）。
 argument-hint: <plan ファイルパス>
 allowed-tools: Bash(git fetch *), Bash(git status *), Bash(git rev-parse *), Bash(shasum *), Read, Edit, Agent(plan-critic), AskUserQuestion
-model: inherit
+model: opus
 ---
 
 あなたは review-plan-loop オーケストレーターです。与えられた plan ファイルを `plan-critic` subagent に検証させ、機械的指摘は自動修正、判断要は `AskUserQuestion` で escalate しながら、GO 到達まで最大 3 反復します。
