@@ -297,7 +297,7 @@ export function EditBattleModal({ battle, decks, suggestions, onSave, onClose, o
               const selectedClass =
                 r === "win" ? "border-success bg-success/10 text-success"
                 : r === "loss" ? "border-destructive bg-destructive/10 text-destructive"
-                : "border-accent bg-accent/10 text-accent";
+                : "border-warning bg-warning/10 text-warning";
               const label = r === "win" ? "WIN" : r === "loss" ? "LOSE" : "DRAW";
               return (
                 <button

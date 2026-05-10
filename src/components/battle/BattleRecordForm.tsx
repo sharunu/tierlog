@@ -8,6 +8,7 @@ import { OpponentDeckSelector } from "./OpponentDeckSelector";
 import { BattleIntervalModal } from "./BattleIntervalModal";
 import { MiniStats } from "../stats/MiniStats";
 import { Surface } from "@/components/ui/Surface";
+import { Button } from "@/components/ui/Button";
 import { supportsDraw, type BattleResult } from "@/lib/battle/result-format";
 
 import type { Format } from "@/hooks/use-format";
@@ -353,44 +354,38 @@ export function BattleRecordForm({
 
         <p className="text-[12px] text-muted-foreground mb-2 mt-3">勝敗</p>
         <div className="flex gap-2">
-          <button
+          <Button
+            variant="result"
+            tone="win"
+            size="lg"
             onClick={() => handleSubmit("win")}
             disabled={submitting || !opponentDeck.trim() || !selectedValue}
-            className={"flex-1 rounded-[6px] px-3 py-2 text-[15px] font-bold transition-all min-h-[44px] text-white " + (
-              lastResult === "win"
-                ? "scale-95 opacity-90"
-                : "hover:brightness-110 disabled:opacity-40"
-            )}
-            style={{ background: "linear-gradient(to right, #22c55e, #16a34a)" }}
+            className={`flex-1 text-[15px] font-bold min-h-[48px] ${lastResult === "win" ? "scale-95 opacity-90" : ""}`}
           >
             WIN
-          </button>
+          </Button>
           {supportsDraw(game) && (
-            <button
+            <Button
+              variant="result"
+              tone="draw"
+              size="lg"
               onClick={() => handleSubmit("draw")}
               disabled={submitting || !opponentDeck.trim() || !selectedValue}
-              className={"flex-1 rounded-[6px] px-3 py-2 text-[15px] font-bold transition-all min-h-[44px] text-white " + (
-                lastResult === "draw"
-                  ? "scale-95 opacity-90"
-                  : "hover:brightness-110 disabled:opacity-40"
-              )}
-              style={{ background: "linear-gradient(to right, #f59e0b, #d97706)" }}
+              className={`flex-1 text-[15px] font-bold min-h-[48px] ${lastResult === "draw" ? "scale-95 opacity-90" : ""}`}
             >
               DRAW
-            </button>
+            </Button>
           )}
-          <button
+          <Button
+            variant="result"
+            tone="loss"
+            size="lg"
             onClick={() => handleSubmit("loss")}
             disabled={submitting || !opponentDeck.trim() || !selectedValue}
-            className={"flex-1 rounded-[6px] px-3 py-2 text-[15px] font-bold transition-all min-h-[44px] text-white " + (
-              lastResult === "loss"
-                ? "scale-95 opacity-90"
-                : "hover:brightness-110 disabled:opacity-40"
-            )}
-            style={{ background: "linear-gradient(to right, #ef4444, #dc2626)" }}
+            className={`flex-1 text-[15px] font-bold min-h-[48px] ${lastResult === "loss" ? "scale-95 opacity-90" : ""}`}
           >
             LOSE
-          </button>
+          </Button>
         </div>
       </Surface>
 

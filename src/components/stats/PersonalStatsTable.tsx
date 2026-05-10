@@ -62,7 +62,7 @@ export function PersonalStatsTable({ stats, game }: { stats: StatRow[]; game: st
                   {row.losses}
                 </td>
                 {showDraws && (
-                  <td className="py-2 px-2 text-center text-accent">
+                  <td className="py-2 px-2 text-center text-warning">
                     {row.draws}
                   </td>
                 )}

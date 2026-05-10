@@ -44,7 +44,7 @@ export function resultColorClass(result: BattleResult): string {
     ? "text-success"
     : result === "loss"
       ? "text-destructive"
-      : "text-accent";
+      : "text-warning";
 }
 
 export function resultBgClass(result: BattleResult): string {
@@ -52,7 +52,7 @@ export function resultBgClass(result: BattleResult): string {
     ? "bg-success"
     : result === "loss"
       ? "bg-destructive"
-      : "bg-accent";
+      : "bg-warning";
 }
 
 // wins/losses/draws カウンタを result に応じてインクリメントする共通処理
