@@ -8,6 +8,7 @@ import { getDisplayName, updateDisplayName, getAuthProvider, getEmail, getXConne
 import { submitFeedback } from "@/lib/actions/feedback-actions";
 import { checkIsAdmin, getPremiumUiVisible } from "@/lib/actions/admin-actions";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { LogOut } from "lucide-react";
 
 export default function AccountPage() {
   const router = useRouter();
@@ -403,11 +404,7 @@ export default function AccountPage() {
               onClick={handleLogout}
             >
               <div className="flex items-center gap-2">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e85d75" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-                  <polyline points="16 17 21 12 16 7" />
-                  <line x1="21" y1="12" x2="9" y2="12" />
-                </svg>
+                <LogOut size={16} className="text-destructive" />
                 <p className="text-[14px] text-destructive">ログアウト</p>
               </div>
               <span className="text-destructive text-[18px]">&rsaquo;</span>

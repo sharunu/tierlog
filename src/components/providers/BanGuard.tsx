@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getUserStage } from "@/lib/actions/account-actions";
+import { Ban } from "lucide-react";
 
 const EXCLUDED_PATHS = ["/auth", "/terms", "/privacy", "/share"];
 
@@ -47,11 +48,8 @@ export function BanGuard({ children }: { children: React.ReactNode }) {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="text-center space-y-4 max-w-sm">
-          <div className="w-16 h-16 rounded-full bg-red-600/20 flex items-center justify-center mx-auto">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#e85d75" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="10" />
-              <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
-            </svg>
+          <div className="w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center mx-auto">
+            <Ban size={32} className="text-destructive" />
           </div>
           <h1 className="text-[18px] font-medium text-white">アカウントが停止されています</h1>
           <p className="text-[13px] text-gray-400">
@@ -59,8 +57,8 @@ export function BanGuard({ children }: { children: React.ReactNode }) {
           </p>
           <button
             onClick={handleLogout}
-            className="w-full bg-[#232640] text-white rounded-[10px] px-4 py-3 text-[14px] font-medium hover:opacity-90"
-            style={{ border: "0.5px solid rgba(100,100,150,0.2)" }}
+            className="w-full bg-surface-2 text-foreground rounded-[10px] px-4 py-3 text-[14px] font-medium hover:opacity-90"
+            style={{ border: "0.5px solid var(--border-subtle)" }}
           >
             ログアウト
           </button>
