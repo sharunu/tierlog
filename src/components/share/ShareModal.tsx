@@ -259,21 +259,23 @@ export function ShareModal({ type, data, onClose }: Props) {
             <div className="flex gap-2">
               <button
                 onClick={handleRetryUpload}
-                disabled={uploadRetrying}
+                disabled={posting || uploadRetrying}
                 className="flex-1 bg-[#6366f1] text-white rounded-[8px] px-3 py-2 text-[12px] font-medium hover:opacity-90 disabled:opacity-50"
               >
                 {uploadRetrying ? "再試行中..." : "再試行"}
               </button>
               <button
                 onClick={handlePostWithoutImage}
-                className="flex-1 bg-[#232640] text-white rounded-[8px] px-3 py-2 text-[12px] font-medium hover:opacity-90"
+                disabled={posting || uploadRetrying}
+                className="flex-1 bg-[#232640] text-white rounded-[8px] px-3 py-2 text-[12px] font-medium hover:opacity-90 disabled:opacity-50"
                 style={{ border: "0.5px solid rgba(100,100,150,0.3)" }}
               >
                 画像なしで投稿
               </button>
               <button
                 onClick={handleCancelUploadError}
-                className="flex-1 bg-transparent text-gray-400 rounded-[8px] px-3 py-2 text-[12px] font-medium hover:text-gray-200"
+                disabled={posting || uploadRetrying}
+                className="flex-1 bg-transparent text-gray-400 rounded-[8px] px-3 py-2 text-[12px] font-medium hover:text-gray-200 disabled:opacity-50"
               >
                 キャンセル
               </button>
