@@ -47,18 +47,23 @@ function parseDeckSelection(value: string): { deckId: string; tuningId: string |
   return { deckId: parts[0], tuningId: parts[1] ?? null };
 }
 
-const MemoIcon = ({ active, hasMemo }: { active: boolean; hasMemo: boolean }) => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-    stroke={hasMemo ? "#6366f1" : active ? "#94a3b8" : "#555577"}
-    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-  >
-    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
-    <path d="M14 2v6h6" />
-    <path d="M16 13H8" />
-    <path d="M16 17H8" />
-    <path d="M10 9H8" />
-  </svg>
-);
+const MemoIcon = ({ active, hasMemo }: { active: boolean; hasMemo: boolean }) => {
+  const stroke = hasMemo ? "var(--primary)" : "var(--muted-foreground)";
+  const strokeOpacity = hasMemo || active ? 1 : 0.5;
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
+      stroke={stroke}
+      strokeOpacity={strokeOpacity}
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+    >
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z" />
+      <path d="M14 2v6h6" />
+      <path d="M16 13H8" />
+      <path d="M16 17H8" />
+      <path d="M10 9H8" />
+    </svg>
+  );
+};
 
 export function EditBattleModal({ battle, decks, suggestions, onSave, onClose, opponentDeckNameMap }: Props) {
   const { slug: game } = useGame();
@@ -77,7 +82,6 @@ export function EditBattleModal({ battle, decks, suggestions, onSave, onClose, o
   const [turnOrder, setTurnOrder] = useState<"first" | "second" | null>(battle.turn_order);
   const [saving, setSaving] = useState(false);
 
-  // Fetch memo suggestions when opponent deck changes
   useEffect(() => {
     if (opponentDeckName.trim()) {
       getOpponentMemoSuggestions(opponentDeckName.trim()).then(setMemoSuggestions);
@@ -97,11 +101,10 @@ export function EditBattleModal({ battle, decks, suggestions, onSave, onClose, o
 
   const deckOptions: { value: string; label: string }[] = [];
 
-  // 記録時のデッキ名が現在のデッキリストに存在しない場合、先頭に追加
   if (!recordedDeckExists) {
     deckOptions.push({
       value: `__snapshot__:${battle.my_deck_name}`,
-      label: `${battle.my_deck_name}（記録時）`,
+      label: `${battle.my_deck_name}(記録時)`,
     });
   }
 
@@ -110,7 +113,7 @@ export function EditBattleModal({ battle, decks, suggestions, onSave, onClose, o
     if (tunings.length === 0) {
       deckOptions.push({ value: deck.id, label: deck.name });
     } else {
-      deckOptions.push({ value: deck.id, label: `${deck.name}（指定なし）` });
+      deckOptions.push({ value: deck.id, label: `${deck.name}(指定なし)` });
       for (const t of tunings) {
         deckOptions.push({ value: `${deck.id}:${t.id}`, label: `${deck.name} / ${t.name}` });
       }
@@ -162,20 +165,16 @@ export function EditBattleModal({ battle, decks, suggestions, onSave, onClose, o
     <button
       type="button"
       onClick={() => setShowMemo(prev => !prev)}
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 4,
-        padding: "3px 8px",
-        borderRadius: 6,
-        background: showMemo ? "rgba(99,102,241,0.1)" : "transparent",
-        border: showMemo ? "1px solid rgba(99,102,241,0.3)" : "1px solid transparent",
-        cursor: "pointer",
-        transition: "all 0.15s",
-      }}
+      className={`flex items-center gap-1 px-2 py-[3px] rounded-md transition-all ${
+        showMemo ? "bg-primary/10 border border-primary/30" : "border border-transparent"
+      }`}
     >
       <MemoIcon active={showMemo} hasMemo={hasMemo} />
-      <span style={{ fontSize: 11, color: hasMemo ? "#6366f1" : showMemo ? "#94a3b8" : "#555577" }}>
+      <span
+        className={`text-[11px] ${
+          hasMemo ? "text-primary" : showMemo ? "text-muted-foreground" : "text-muted-foreground/50"
+        }`}
+      >
         {hasMemo ? opponentMemo.trim() : "メモ"}
       </span>
     </button>
@@ -188,7 +187,6 @@ export function EditBattleModal({ battle, decks, suggestions, onSave, onClose, o
       <div className="bg-card rounded-xl border border-border p-5 w-[90%] max-w-md space-y-4 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <h2 className="text-base font-bold">対戦記録を編集</h2>
 
-        {/* My deck selector */}
         <div className="space-y-1">
           <label className="text-sm text-muted-foreground">使用デッキ</label>
           <select
@@ -204,7 +202,6 @@ export function EditBattleModal({ battle, decks, suggestions, onSave, onClose, o
           </select>
         </div>
 
-        {/* Opponent deck selector + memo */}
         <div className="space-y-1">
           <OpponentDeckSelector
             majorSuggestions={suggestions.major}
@@ -216,38 +213,20 @@ export function EditBattleModal({ battle, decks, suggestions, onSave, onClose, o
             nameMap={opponentDeckNameMap}
           />
 
-          {/* Memo panel */}
           {showMemo && (
-            <div
-              style={{
-                marginTop: 8,
-                background: "#1e2138",
-                borderRadius: 10,
-                border: "0.5px solid #333355",
-                padding: "10px 12px",
-              }}
-            >
+            <div className="mt-2 rounded-md border border-border-subtle bg-surface-2 px-3 py-2.5">
               <input
                 type="text"
                 value={opponentMemo}
                 onChange={(e) => setOpponentMemo(e.target.value)}
-                placeholder="デッキの特徴をメモ（例：クロック入り）"
+                placeholder="デッキの特徴をメモ(例: クロック入り)"
                 autoFocus
-                style={{
-                  width: "100%",
-                  background: "#232640",
-                  border: "0.5px solid #333355",
-                  borderRadius: 6,
-                  padding: "8px 12px",
-                  fontSize: 13,
-                  color: "#e8e8ec",
-                  outline: "none",
-                }}
+                className="w-full rounded-md bg-surface-3 border border-border-subtle px-3 py-2 text-[13px] text-foreground outline-none focus:ring-2 focus:ring-primary"
               />
               {memoSuggestions.length > 0 && (
-                <div style={{ marginTop: 8 }}>
-                  <p style={{ fontSize: 10, color: "#666688", marginBottom: 6 }}>過去のメモ</p>
-                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                <div className="mt-2">
+                  <p className="text-[10px] text-muted-foreground mb-1.5">過去のメモ</p>
+                  <div className="flex flex-wrap gap-1.5">
                     {memoSuggestions.map((s) => (
                       <MemoSuggestionButton
                         key={s}
@@ -268,9 +247,8 @@ export function EditBattleModal({ battle, decks, suggestions, onSave, onClose, o
           )}
         </div>
 
-        {/* Turn order */}
         <div className="space-y-1">
-          <label className="text-sm text-muted-foreground">先攻/後攻（任意）</label>
+          <label className="text-sm text-muted-foreground">先攻/後攻(任意)</label>
           <div className="flex gap-2">
             {(["first", "second"] as const).map((order) => (
               <button
@@ -289,7 +267,6 @@ export function EditBattleModal({ battle, decks, suggestions, onSave, onClose, o
           </div>
         </div>
 
-        {/* Result */}
         <div className="space-y-1">
           <label className="text-sm text-muted-foreground">勝敗</label>
           <div className="flex gap-2">
@@ -317,7 +294,6 @@ export function EditBattleModal({ battle, decks, suggestions, onSave, onClose, o
           </div>
         </div>
 
-        {/* Actions */}
         <div className="flex gap-3 pt-2">
           <button
             onClick={onClose}

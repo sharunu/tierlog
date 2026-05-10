@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import useEmblaCarousel from "embla-carousel-react";
 import { FormatSelector } from "@/components/ui/FormatSelector";
 import { SegmentedControl } from "@/components/ui/SegmentedControl";
+import { Button } from "@/components/ui/Button";
 import { BattleRecordForm } from "@/components/battle/BattleRecordForm";
 import { DateRangeCalendar } from "@/components/battle/DateRangeCalendar";
 import { DeckFilter } from "@/components/battle/DeckFilter";
@@ -190,8 +191,7 @@ export function BattleTabsView(props: Props) {
             {props.isAdmin && (
               <a
                 href="/admin/opponent-decks"
-                className="text-[11px] text-gray-400 hover:text-white px-2 py-1 rounded-[6px] transition-colors"
-                style={{ backgroundColor: "#1a1d2e", border: "0.5px solid #333355" }}
+                className="text-[11px] text-muted-foreground hover:text-foreground px-2 py-1 rounded-[6px] transition-colors bg-surface-1 border border-border-subtle"
               >
                 対面デッキ管理
               </a>
@@ -247,29 +247,26 @@ export function BattleTabsView(props: Props) {
             >
               {props.historyLoading ? (
                 <div className="space-y-3">
-                  <div className="animate-pulse rounded-[10px] bg-[#232640] h-10" />
-                  <div className="animate-pulse rounded-[10px] bg-[#232640] h-[280px]" />
-                  <div className="animate-pulse rounded-[10px] bg-[#232640] h-[52px]" />
-                  <div className="animate-pulse rounded-[10px] bg-[#232640] h-[52px]" />
-                  <div className="animate-pulse rounded-[10px] bg-[#232640] h-[52px]" />
-                  <div className="animate-pulse rounded-[10px] bg-[#232640] h-[52px]" />
+                  <div className="animate-pulse rounded-[10px] bg-surface-2 h-10" />
+                  <div className="animate-pulse rounded-[10px] bg-surface-2 h-[280px]" />
+                  <div className="animate-pulse rounded-[10px] bg-surface-2 h-[52px]" />
+                  <div className="animate-pulse rounded-[10px] bg-surface-2 h-[52px]" />
+                  <div className="animate-pulse rounded-[10px] bg-surface-2 h-[52px]" />
+                  <div className="animate-pulse rounded-[10px] bg-surface-2 h-[52px]" />
                 </div>
               ) : props.hasAny === false ? (
-                <div
-                  className="rounded-[12px] p-6 text-center space-y-4"
-                  style={{ backgroundColor: "#1a1d2e", border: "0.5px solid #333355" }}
-                >
+                <div className="rounded-[12px] p-6 text-center space-y-4 bg-surface-1 border border-border-subtle">
                   <div className="space-y-2">
                     <h2 className="text-[18px] font-medium">まだ対戦記録がありません</h2>
-                    <p className="text-sm text-gray-400">最初の対戦を記録してみましょう。</p>
+                    <p className="text-sm text-muted-foreground">最初の対戦を記録してみましょう。</p>
                   </div>
-                  <button
-                    type="button"
+                  <Button
+                    variant="primary"
+                    size="md"
                     onClick={() => switchTo("input")}
-                    className="inline-block rounded-[10px] px-5 py-3 text-sm font-medium bg-[#6366f1] hover:bg-[#5558e6] transition-colors"
                   >
                     対戦を記録する
-                  </button>
+                  </Button>
                 </div>
               ) : (
                 <>
@@ -305,7 +302,7 @@ export function BattleTabsView(props: Props) {
             <span
               key={key}
               className={`w-1.5 h-1.5 rounded-full transition-colors ${
-                currentSlide === key ? "bg-[#818cf8]" : "bg-gray-600"
+                currentSlide === key ? "bg-primary" : "bg-muted-foreground/40"
               }`}
             />
           ))}
@@ -316,7 +313,7 @@ export function BattleTabsView(props: Props) {
         <div
           role="status"
           aria-live="polite"
-          className="fixed left-1/2 -translate-x-1/2 bottom-[72px] z-50 rounded-[10px] px-4 py-2 text-sm font-medium bg-[#6366f1] text-white shadow-lg"
+          className="fixed left-1/2 -translate-x-1/2 bottom-[72px] z-50 rounded-[10px] px-4 py-2 text-sm font-medium bg-primary text-primary-foreground shadow-lg"
         >
           {toast}
         </div>

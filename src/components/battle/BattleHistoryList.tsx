@@ -65,7 +65,7 @@ export function BattleHistoryList({ battles, decks, suggestions, onRefresh, read
   }
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm("この対戦記録を削除しますか？")) return;
+    if (!window.confirm("この対戦記録を削除しますか?")) return;
     await deleteBattle(id);
     onRefresh?.();
   };
@@ -93,16 +93,14 @@ export function BattleHistoryList({ battles, decks, suggestions, onRefresh, read
       <div className="space-y-0">
         {groups.map((group, groupIdx) => (
           <div key={group.date}>
-            {/* Date group header */}
             <div
-              className={`text-[11px] font-medium text-[#555577] ${
+              className={`text-[11px] font-medium text-muted-foreground/60 ${
                 groupIdx === 0 ? "pt-[4px]" : "pt-[10px]"
               } pb-[6px]`}
             >
               {group.date}
             </div>
 
-            {/* Battle cards */}
             <div className="flex flex-col gap-[6px]">
               {group.battles.map((b) => {
                 const deckDisplay = b.my_deck_name ?? "?";
@@ -110,13 +108,13 @@ export function BattleHistoryList({ battles, decks, suggestions, onRefresh, read
                 const resultKey = b.result;
 
                 const barColor =
-                  resultKey === "win" ? "bg-[#50c878]"
-                  : resultKey === "loss" ? "bg-[#e85d75]"
-                  : "bg-[#f59e0b]";
+                  resultKey === "win" ? "bg-success"
+                  : resultKey === "loss" ? "bg-destructive"
+                  : "bg-warning";
                 const badgeColor =
-                  resultKey === "win" ? "bg-[rgba(80,200,120,0.12)] text-[#50c878]"
-                  : resultKey === "loss" ? "bg-[rgba(232,93,117,0.12)] text-[#e85d75]"
-                  : "bg-[rgba(245,158,11,0.12)] text-[#f59e0b]";
+                  resultKey === "win" ? "bg-success/15 text-success"
+                  : resultKey === "loss" ? "bg-destructive/15 text-destructive"
+                  : "bg-warning/15 text-warning";
                 const badgeLabel =
                   resultKey === "win" ? "WIN"
                   : resultKey === "loss" ? "LOSE"
@@ -125,14 +123,11 @@ export function BattleHistoryList({ battles, decks, suggestions, onRefresh, read
                 return (
                   <div
                     key={b.id}
-                    className="bg-[#232640] rounded-[10px] overflow-hidden flex"
+                    className="bg-surface-2 rounded-[10px] overflow-hidden flex"
                   >
-                    {/* Left color bar */}
                     <div className={`w-[3px] shrink-0 ${barColor}`} />
 
-                    {/* Card content */}
                     <div className="flex-1 px-3 py-2.5 min-w-0">
-                      {/* Top row: badge, deck, vs, opponent */}
                       <div className="flex items-center gap-1.5 min-w-0">
                         <span
                           className={`shrink-0 inline-block rounded px-1.5 py-0.5 text-[10px] font-medium ${badgeColor}`}
@@ -140,42 +135,41 @@ export function BattleHistoryList({ battles, decks, suggestions, onRefresh, read
                           {badgeLabel}
                         </span>
 
-                        <span className="text-[13px] font-medium text-white truncate">
+                        <span className="text-[13px] font-medium text-foreground truncate">
                           {deckDisplay}
                         </span>
                         {tuningDisplay && (
                           <>
-                            <span className="text-[11px] text-[#8888aa] shrink-0">/</span>
-                            <span className="text-[11px] text-[#8888aa] truncate">
+                            <span className="text-[11px] text-muted-foreground shrink-0">/</span>
+                            <span className="text-[11px] text-muted-foreground truncate">
                               {tuningDisplay}
                             </span>
                           </>
                         )}
-                        <span className="text-[11px] text-[#555577] shrink-0">vs</span>
-                        <span className="text-[13px] text-[#ccccdd] truncate">
+                        <span className="text-[11px] text-muted-foreground/60 shrink-0">vs</span>
+                        <span className="text-[13px] text-foreground truncate">
                           {displayDeckName(b.opponent_deck_name, opponentDeckNameMap)}
                         </span>
                       </div>
 
-                      {/* Bottom row: turn order, memo, time, buttons */}
                       <div className="flex items-center gap-2 mt-1">
                         {b.turn_order && (
                           <span
                             className={`text-[10px] font-medium px-1.5 py-0.5 rounded-[3px] ${
                               b.turn_order === "first"
-                                ? "bg-[rgba(240,160,48,0.1)] text-[#f0a030]"
-                                : "bg-[rgba(91,141,239,0.1)] text-[#5b8def]"
+                                ? "bg-warning/10 text-warning"
+                                : "bg-primary/10 text-primary"
                             }`}
                           >
                             {b.turn_order === "first" ? "先攻" : "後攻"}
                           </span>
                         )}
                         {b.opponent_memo && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-[3px] bg-[rgba(148,163,184,0.1)] text-[#94a3b8] truncate max-w-[120px]">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-[3px] bg-muted/30 text-muted-foreground truncate max-w-[120px]">
                             {b.opponent_memo}
                           </span>
                         )}
-                        <span className="text-[10px] text-[#555577]">
+                        <span className="text-[10px] text-muted-foreground/60">
                           {formatTime(b.fought_at)}
                         </span>
 
@@ -183,15 +177,21 @@ export function BattleHistoryList({ battles, decks, suggestions, onRefresh, read
                           <div className="ml-auto flex gap-1.5">
                             <button
                               onClick={() => setEditingBattle(b)}
+                              aria-label="編集"
                               className="relative p-2 -m-2 flex items-center justify-center"
                             >
-                              <span className="w-[28px] h-[28px] flex items-center justify-center rounded-[6px] bg-[rgba(91,141,239,0.08)]"><Pencil size={13} color="#5b8def" /></span>
+                              <span className="w-[28px] h-[28px] flex items-center justify-center rounded-[6px] bg-primary/10 text-primary">
+                                <Pencil size={13} />
+                              </span>
                             </button>
                             <button
                               onClick={() => handleDelete(b.id)}
+                              aria-label="削除"
                               className="relative p-2 -m-2 flex items-center justify-center"
                             >
-                              <span className="w-[28px] h-[28px] flex items-center justify-center rounded-[6px] bg-[rgba(232,93,117,0.08)]"><X size={13} color="#e85d75" /></span>
+                              <span className="w-[28px] h-[28px] flex items-center justify-center rounded-[6px] bg-destructive/10 text-destructive">
+                                <X size={13} />
+                              </span>
                             </button>
                           </div>
                         )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { Trash2 } from "lucide-react";
 
 type Props = {
   memo: string;
@@ -52,7 +53,6 @@ export function MemoSuggestionButton({ memo, isSelected, onSelect, onDelete }: P
     clearTimer();
   }, [clearTimer]);
 
-  // Close popup on outside click
   useEffect(() => {
     if (!showPopup) return;
     const handleOutside = (e: MouseEvent | TouchEvent) => {
@@ -79,7 +79,7 @@ export function MemoSuggestionButton({ memo, isSelected, onSelect, onDelete }: P
   };
 
   return (
-    <span style={{ position: "relative", display: "inline-block" }}>
+    <span className="relative inline-block">
       <button
         ref={btnRef}
         type="button"
@@ -91,82 +91,45 @@ export function MemoSuggestionButton({ memo, isSelected, onSelect, onDelete }: P
         onTouchMove={handleTouchMove}
         onContextMenu={handleContextMenu}
         onClick={handleClick}
-        style={{
-          padding: "5px 10px",
-          fontSize: 11,
-          borderRadius: 6,
-          background: isSelected ? "rgba(99,102,241,0.15)" : "#232640",
-          border: isSelected ? "1px solid #6366f1" : "0.5px solid #333355",
-          color: "#ccccdd",
-          cursor: "pointer",
-          transition: "all 0.15s",
-          userSelect: "none",
-          WebkitUserSelect: "none",
-        }}
+        className={`px-2.5 py-1 text-[11px] rounded-md transition-all select-none ${
+          isSelected
+            ? "bg-primary/15 border border-primary text-foreground"
+            : "bg-surface-2 border border-border-subtle text-foreground"
+        }`}
       >
         {memo}
       </button>
 
-      {/* Floating delete popup */}
       {showPopup && (
         <div
           ref={popupRef}
-          style={{
-            position: "absolute",
-            bottom: "calc(100% + 8px)",
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 50,
-            animation: "memoPopupIn 0.18s ease-out",
-          }}
+          className="absolute left-1/2 -translate-x-1/2 z-50"
+          style={{ bottom: "calc(100% + 8px)", animation: "memoPopupIn 0.18s ease-out" }}
         >
-          <div
-            style={{
-              background: "#1e2138",
-              border: "1px solid rgba(232,93,117,0.4)",
-              borderRadius: 10,
-              padding: "6px 4px",
-              boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              minWidth: 56,
-            }}
-          >
+          <div className="rounded-[10px] border border-destructive/40 bg-surface-2 shadow-lg flex flex-col items-center px-1 py-1.5 min-w-[56px]">
             <button
               type="button"
               onClick={handleDelete}
               disabled={deleting}
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                gap: 2,
-                padding: "6px 12px",
-                background: "transparent",
-                border: "none",
-                cursor: "pointer",
-                opacity: deleting ? 0.5 : 1,
-              }}
+              aria-label="メモを削除"
+              className={`flex flex-col items-center gap-0.5 px-3 py-1.5 transition-opacity ${
+                deleting ? "opacity-50" : "opacity-100"
+              }`}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e85d75" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="3 6 5 6 21 6" />
-                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              </svg>
-              <span style={{ fontSize: 10, color: "#e85d75", fontWeight: 500 }}>
+              <Trash2 size={18} className="text-destructive" />
+              <span className="text-[10px] text-destructive font-medium">
                 {deleting ? "..." : "削除"}
               </span>
             </button>
           </div>
-          {/* Arrow pointing down */}
           <div
+            className="mx-auto"
             style={{
               width: 0,
               height: 0,
               borderLeft: "6px solid transparent",
               borderRight: "6px solid transparent",
-              borderTop: "6px solid #1e2138",
-              margin: "0 auto",
+              borderTop: "6px solid var(--surface-2)",
             }}
           />
           <style>{`

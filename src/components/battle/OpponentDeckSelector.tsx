@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Search, X } from "lucide-react";
 
 import {
   displayDeckName,
@@ -16,13 +17,6 @@ type Props = {
   headerExtra?: React.ReactNode;
   nameMap?: OpponentDeckNameMap;
 };
-
-const SearchIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#666688" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="11" cy="11" r="8" />
-    <path d="m21 21-4.3-4.3" />
-  </svg>
-);
 
 export function OpponentDeckSelector({
   majorSuggestions,
@@ -69,44 +63,37 @@ export function OpponentDeckSelector({
 
   const handleSelect = (name: string) => {
     onChange(name);
-    // 検索 UI が表示されている時のみ検索欄を表示名で同期する。
-    // 主要候補チップだけのタップでは UI を勝手に開かない。
     const searchUiVisible = showOther || searchText.trim().length > 0;
     if (searchUiVisible) {
       setSearchText(display(name));
     }
   };
 
-  const chipStyle = (name: string) => {
+  const chipClass = (name: string) => {
     const isSelected = value === name;
-    return {
-      padding: "6px 12px",
-      fontSize: 11,
-      borderRadius: 8,
-      background: isSelected ? "rgba(99,102,241,0.1)" : "#232640",
-      border: isSelected ? "1px solid #6366f1" : "0.5px solid #333355",
-      color: "#ccccdd",
-      cursor: "pointer",
-      transition: "all 0.15s",
-    } as React.CSSProperties;
+    return `rounded-lg px-3 py-1.5 text-[11px] font-medium transition-all ${
+      isSelected
+        ? "bg-primary/10 border border-primary text-primary"
+        : "bg-surface-2 border border-border-subtle text-foreground"
+    }`;
   };
 
-  const otherSelected = value && !majorSuggestions.includes(value);
+  const otherSelected = !!value && !majorSuggestions.includes(value);
 
   return (
     <div>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
-        <p style={{ fontSize: 12, color: "#6b7280" }}>対面デッキ</p>
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-[12px] text-muted-foreground">対面デッキ</p>
         {headerExtra}
       </div>
 
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+      <div className="flex flex-wrap gap-1.5">
         {(hasSearchText ? filteredMajor : majorSuggestions).map((name) => (
           <button
             key={name}
             type="button"
             onClick={() => handleSelect(name)}
-            style={chipStyle(name)}
+            className={chipClass(name)}
           >
             {display(name)}
           </button>
@@ -116,20 +103,11 @@ export function OpponentDeckSelector({
           <button
             type="button"
             onClick={() => setShowOther((prev) => !prev)}
-            style={{
-              padding: "7px 14px",
-              fontSize: 12,
-              borderRadius: 8,
-              background: otherSelected
-                ? "rgba(99,102,241,0.1)"
-                : "#232640",
-              border: otherSelected
-                ? "1px solid #6366f1"
-                : "1px dashed rgba(100,100,150,0.4)",
-              color: "#999",
-              cursor: "pointer",
-              transition: "all 0.15s",
-            }}
+            className={`rounded-lg px-3.5 py-1.5 text-[12px] font-medium transition-all ${
+              otherSelected
+                ? "bg-primary/10 border border-primary text-primary"
+                : "bg-surface-2 border border-dashed border-border-subtle text-muted-foreground"
+            }`}
           >
             その他{showOther ? " ▴" : "..."}
           </button>
@@ -137,20 +115,9 @@ export function OpponentDeckSelector({
       </div>
 
       {(showOther || hasSearchText) && (
-        <div style={{ marginTop: 12 }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 8,
-              background: "#1e2138",
-              borderRadius: 8,
-              border: "0.5px solid #333355",
-              padding: "8px 12px",
-              marginBottom: 12,
-            }}
-          >
-            <SearchIcon />
+        <div className="mt-3">
+          <div className="flex items-center gap-2 bg-surface-2 rounded-lg border border-border-subtle px-3 py-2 mb-3">
+            <Search size={14} className="text-muted-foreground shrink-0" aria-hidden="true" />
             <input
               type="text"
               placeholder="デッキ名を検索・入力..."
@@ -161,14 +128,7 @@ export function OpponentDeckSelector({
                   onChange(e.target.value);
                 }
               }}
-              style={{
-                flex: 1,
-                background: "transparent",
-                border: "none",
-                outline: "none",
-                color: "#e8e8ec",
-                fontSize: 13,
-              }}
+              className="flex-1 bg-transparent border-none outline-none text-foreground text-[13px]"
               autoFocus
             />
             {searchText && (
@@ -178,27 +138,28 @@ export function OpponentDeckSelector({
                   setSearchText("");
                   onChange("");
                 }}
-                style={{ color: "#666688", fontSize: 14, lineHeight: 1 }}
+                aria-label="検索をクリア"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                ✕
+                <X size={14} />
               </button>
             )}
           </div>
 
           {noMatch ? (
-            <p style={{ fontSize: 11, color: "#666688", textAlign: "center", padding: "8px 0" }}>
+            <p className="text-[11px] text-muted-foreground text-center py-2">
               該当するデッキがありません。入力テキストがそのまま使用されます。
             </p>
           ) : (
             <>
               {(hasSearchText ? filteredMinor : minorSuggestions).length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                <div className="flex flex-wrap gap-1.5">
                   {(hasSearchText ? filteredMinor : minorSuggestions).map((name) => (
                     <button
                       key={name}
                       type="button"
                       onClick={() => handleSelect(name)}
-                      style={chipStyle(name)}
+                      className={chipClass(name)}
                     >
                       {display(name)}
                     </button>
@@ -210,29 +171,20 @@ export function OpponentDeckSelector({
                 <button
                   type="button"
                   onClick={() => setShowMore((prev) => !prev)}
-                  style={{
-                    marginTop: 8,
-                    padding: "6px 14px",
-                    fontSize: 11,
-                    borderRadius: 8,
-                    background: "#232640",
-                    border: "1px dashed rgba(100,100,150,0.4)",
-                    color: "#999",
-                    cursor: "pointer",
-                  }}
+                  className="mt-2 rounded-lg px-3.5 py-1.5 text-[11px] font-medium transition-all bg-surface-2 border border-dashed border-border-subtle text-muted-foreground"
                 >
                   さらに表示{showMore ? " ▴" : "..."}
                 </button>
               )}
 
               {(hasSearchText || showMore) && (hasSearchText ? filteredOther : otherSuggestions).length > 0 && (
-                <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 8 }}>
+                <div className="flex flex-wrap gap-1.5 mt-2">
                   {(hasSearchText ? filteredOther : otherSuggestions).map((name) => (
                     <button
                       key={name}
                       type="button"
                       onClick={() => handleSelect(name)}
-                      style={chipStyle(name)}
+                      className={chipClass(name)}
                     >
                       {display(name)}
                     </button>
