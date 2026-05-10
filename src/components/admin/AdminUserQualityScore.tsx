@@ -123,7 +123,7 @@ export function AdminUserQualityScore({ userId }: { userId: string }) {
 
   if (loading) {
     return (
-      <div className="bg-[#232640] rounded-[10px] px-4 py-4 mb-4">
+      <div className="bg-surface-2 rounded-[10px] px-4 py-4 mb-4">
         <div className="flex justify-center py-4">
           <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         </div>
@@ -139,7 +139,7 @@ export function AdminUserQualityScore({ userId }: { userId: string }) {
   return (
     <div className="space-y-3 mb-4">
       {/* スコアサマリ */}
-      <div className="bg-[#232640] rounded-[10px] px-4 py-4">
+      <div className="bg-surface-2 rounded-[10px] px-4 py-4">
         <div className="flex items-center justify-between mb-3">
           <p className="text-[14px] font-medium">品質スコア</p>
           {snapshot && (
@@ -159,7 +159,7 @@ export function AdminUserQualityScore({ userId }: { userId: string }) {
             </div>
 
             {/* 内訳 */}
-            <div className="bg-[#1a1d2e] rounded-[6px] px-3 py-2 mb-3">
+            <div className="bg-surface-1 rounded-[6px] px-3 py-2 mb-3">
               <p className="text-[11px] text-gray-500 mb-1.5">スコア内訳</p>
               {Object.entries(snapshot.breakdown).map(([key, value]) => (
                 <div key={key} className="flex justify-between text-[12px] py-0.5">
@@ -182,14 +182,14 @@ export function AdminUserQualityScore({ userId }: { userId: string }) {
         <button
           onClick={handleRecalculate}
           disabled={recalculating}
-          className="w-full mt-3 bg-[#3d4070] text-white rounded-[6px] px-3 py-2 text-[12px] font-medium hover:opacity-90 disabled:opacity-50"
+          className="w-full mt-3 bg-primary text-primary-foreground rounded-[6px] px-3 py-2 text-[12px] font-medium hover:opacity-90 disabled:opacity-50"
         >
           {recalculating ? "計算中..." : "個別再計算"}
         </button>
       </div>
 
       {/* 管理者ボーナス */}
-      <div className="bg-[#232640] rounded-[10px] px-4 py-4">
+      <div className="bg-surface-2 rounded-[10px] px-4 py-4">
         <p className="text-[14px] font-medium mb-1">管理者ボーナス</p>
         <p className="text-[11px] text-gray-500 mb-3">{bonusLabel}</p>
 
@@ -204,8 +204,8 @@ export function AdminUserQualityScore({ userId }: { userId: string }) {
                   const num = parseInt(e.target.value);
                   if (!isNaN(num)) setEditBonusScore(num);
                 }}
-                className="w-20 bg-[#1a1d2e] rounded-[6px] px-2 py-1.5 text-[13px] text-right focus:outline-none"
-                style={{ border: "0.5px solid #333355" }}
+                className="w-20 bg-surface-1 rounded-[6px] px-2 py-1.5 text-[13px] text-right focus:outline-none"
+                style={{ border: "0.5px solid var(--border)" }}
               />
               <span className="text-[11px] text-gray-500">点</span>
             </div>
@@ -214,14 +214,14 @@ export function AdminUserQualityScore({ userId }: { userId: string }) {
             value={editBonusMemo}
             onChange={(e) => setEditBonusMemo(e.target.value)}
             placeholder="理由メモ"
-            className="w-full bg-[#1a1d2e] rounded-[6px] px-3 py-2 text-[13px] focus:outline-none resize-none"
-            style={{ border: "0.5px solid #333355", minHeight: 50 }}
+            className="w-full bg-surface-1 rounded-[6px] px-3 py-2 text-[13px] focus:outline-none resize-none"
+            style={{ border: "0.5px solid var(--border)", minHeight: 50 }}
           />
           <div className="flex gap-2">
             <button
               onClick={handleSaveBonus}
               disabled={savingBonus}
-              className="flex-1 bg-[#3d4070] text-white rounded-[6px] px-3 py-2 text-[12px] font-medium hover:opacity-90 disabled:opacity-50"
+              className="flex-1 bg-primary text-primary-foreground rounded-[6px] px-3 py-2 text-[12px] font-medium hover:opacity-90 disabled:opacity-50"
             >
               {savingBonus ? "保存中..." : "保存"}
             </button>
@@ -229,8 +229,8 @@ export function AdminUserQualityScore({ userId }: { userId: string }) {
               <button
                 onClick={handleDeleteBonus}
                 disabled={savingBonus}
-                className="bg-[#1a1d2e] text-red-400 rounded-[6px] px-3 py-2 text-[12px] font-medium hover:opacity-90 disabled:opacity-50"
-                style={{ border: "0.5px solid #333355" }}
+                className="bg-surface-1 text-destructive rounded-[6px] px-3 py-2 text-[12px] font-medium hover:opacity-90 disabled:opacity-50"
+                style={{ border: "0.5px solid var(--border)" }}
               >
                 削除
               </button>

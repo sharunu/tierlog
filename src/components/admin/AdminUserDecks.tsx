@@ -55,7 +55,7 @@ export function AdminUserDecks({ userId, format, game = DEFAULT_GAME }: Props) {
         const hasTunings = deck.deck_tunings.length > 0;
 
         return (
-          <div key={deck.id} className="bg-[#232640] rounded-[10px] overflow-hidden">
+          <div key={deck.id} className="bg-surface-2 rounded-[10px] overflow-hidden">
             <button
               onClick={() => hasTunings && setExpandedDeck(isExpanded ? null : deck.id)}
               className={`w-full px-4 py-3 flex items-center gap-3 text-left ${hasTunings ? "cursor-pointer" : "cursor-default"}`}

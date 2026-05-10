@@ -29,7 +29,7 @@ export function AdminUserHome({ userId }: { userId: string }) {
     <div className="space-y-3">
       {/* 所属サーバー */}
       {detail.teams && detail.teams.length > 0 ? (
-        <div className="bg-[#232640] rounded-[10px] px-4 py-3" style={{ border: "0.5px solid rgba(100,100,150,0.15)" }}>
+        <div className="bg-surface-2 rounded-[10px] px-4 py-3" style={{ border: "0.5px solid var(--border-subtle)" }}>
           <p className="text-[12px] text-gray-500 mb-2">所属サーバー（{detail.teams.length}件）</p>
           <div className="space-y-3">
             {detail.teams.map((team) => (
@@ -47,7 +47,7 @@ export function AdminUserHome({ userId }: { userId: string }) {
                 </div>
                 <div className="pl-7 flex flex-wrap gap-1">
                   {team.members.map((m, i) => (
-                    <span key={i} className="text-[11px] text-gray-400 bg-[#1a1d2e] rounded px-1.5 py-0.5">
+                    <span key={i} className="text-[11px] text-gray-400 bg-surface-1 rounded px-1.5 py-0.5">
                       {m.discord_username}
                     </span>
                   ))}

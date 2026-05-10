@@ -10,9 +10,9 @@ type Props = {
 };
 
 const categoryConfig: Record<string, { label: string; color: string; bg: string }> = {
-  bug: { label: "バグ", color: "#e85d75", bg: "rgba(232,93,117,0.12)" },
-  feature: { label: "機能要望", color: "#5b8def", bg: "rgba(91,141,239,0.12)" },
-  other: { label: "その他", color: "#8888aa", bg: "rgba(136,136,170,0.12)" },
+  bug: { label: "バグ", color: "var(--destructive)", bg: "color-mix(in srgb, var(--destructive) 12%, transparent)" },
+  feature: { label: "機能要望", color: "var(--primary)", bg: "color-mix(in srgb, var(--primary) 12%, transparent)" },
+  other: { label: "その他", color: "var(--muted-foreground)", bg: "color-mix(in srgb, var(--muted-foreground) 12%, transparent)" },
 };
 
 const categoryFilters = [
@@ -88,8 +88,8 @@ export function FeedbackList({ feedbacks }: Props) {
             onClick={() => setFilter(f.value)}
             className={`rounded-[20px] border px-3 py-1.5 text-xs font-medium transition-colors ${
               filter === f.value
-                ? "bg-[rgba(91,141,239,0.15)] text-[#5b8def] border-transparent"
-                : "bg-[#232640] text-[#8888aa] border-transparent"
+                ? "bg-primary/15 text-primary border-transparent"
+                : "bg-surface-2 text-muted-foreground border-transparent"
             }`}
           >
             {f.label}
@@ -104,8 +104,8 @@ export function FeedbackList({ feedbacks }: Props) {
             onClick={() => setStatusFilter(f.value)}
             className={`rounded-[20px] border px-3 py-1.5 text-xs font-medium transition-colors ${
               statusFilter === f.value
-                ? "bg-[rgba(245,195,75,0.15)] text-[#f5c34b] border-transparent"
-                : "bg-[#232640] text-[#8888aa] border-transparent"
+                ? "bg-warning/15 text-warning border-transparent"
+                : "bg-surface-2 text-muted-foreground border-transparent"
             }`}
           >
             {f.label}
@@ -125,7 +125,7 @@ export function FeedbackList({ feedbacks }: Props) {
             const dateStr = date ? `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")} ${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}` : "";
 
             return (
-              <div key={fb.id} className="bg-[#232640] rounded-[10px] px-4 py-3">
+              <div key={fb.id} className="bg-surface-2 rounded-[10px] px-4 py-3">
                 <div className="flex items-center gap-2 mb-2">
                   <span
                     className="text-[10px] font-medium px-2 py-0.5 rounded-full"
@@ -136,15 +136,15 @@ export function FeedbackList({ feedbacks }: Props) {
                   <span className="text-[11px] text-gray-500">{dateStr}</span>
                   <span className="text-[11px] text-gray-500 ml-auto truncate max-w-[120px]">{userName}</span>
                 </div>
-                <p className="text-[13px] text-[#ccccdd] whitespace-pre-wrap break-words">{fb.message}</p>
+                <p className="text-[13px] text-foreground whitespace-pre-wrap break-words">{fb.message}</p>
                 <div className="flex items-center gap-2 mt-3">
                   <button
                     onClick={() => handleToggleStatus(fb)}
                     disabled={updating[fb.id]}
                     className={`text-[11px] px-2.5 py-1 rounded-full font-medium transition-colors disabled:opacity-50 ${
                       fb.status === "pending"
-                        ? "bg-[rgba(232,93,117,0.12)] text-[#e85d75] hover:bg-[rgba(232,93,117,0.2)]"
-                        : "bg-[rgba(91,141,239,0.12)] text-[#5b8def] hover:bg-[rgba(91,141,239,0.2)]"
+                        ? "bg-destructive/12 text-destructive hover:bg-destructive/20"
+                        : "bg-primary/12 text-primary hover:bg-primary/20"
                     }`}
                   >
                     {fb.status === "pending" ? "未処理" : "処理済み"}
@@ -152,7 +152,7 @@ export function FeedbackList({ feedbacks }: Props) {
                   {fb.user_id ? (
                     <button
                       onClick={() => router.push(`/admin/users/${fb.user_id}`)}
-                      className="text-[11px] text-[#5b8def] hover:underline ml-auto"
+                      className="text-[11px] text-primary hover:underline ml-auto"
                     >
                       詳細を見る &rsaquo;
                     </button>

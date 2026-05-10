@@ -50,7 +50,7 @@ export function AdminUserStageHistory({ userId }: { userId: string }) {
         const from = stageLabels[h.from_stage];
         const to = stageLabels[h.to_stage];
         return (
-          <div key={h.id} className="bg-[#232640] rounded-[8px] px-4 py-3">
+          <div key={h.id} className="bg-surface-2 rounded-[8px] px-4 py-3">
             <div className="flex items-center gap-2 mb-1">
               <span className={`text-[12px] ${from.color}`}>{from.label}</span>
               <span className="text-[12px] text-gray-600">→</span>

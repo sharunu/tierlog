@@ -17,7 +17,7 @@ export function AdminUserAccountInfo({ userId }: { userId: string }) {
 
   if (loading) {
     return (
-      <div className="bg-[#232640] rounded-[10px] px-4 py-3 mb-4">
+      <div className="bg-surface-2 rounded-[10px] px-4 py-3 mb-4">
         <div className="flex justify-center py-2">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
         </div>
@@ -32,7 +32,7 @@ export function AdminUserAccountInfo({ userId }: { userId: string }) {
   return (
     <div className="space-y-3 mb-4">
       {/* ログイン・連携情報 */}
-      <div className="bg-[#232640] rounded-[10px] px-4 py-3" style={{ border: "0.5px solid rgba(100,100,150,0.15)" }}>
+      <div className="bg-surface-2 rounded-[10px] px-4 py-3" style={{ border: "0.5px solid var(--border-subtle)" }}>
         <p className="text-[12px] text-gray-500 mb-2">アカウント情報</p>
         <div className="space-y-2 text-[13px]">
           <div className="flex justify-between">

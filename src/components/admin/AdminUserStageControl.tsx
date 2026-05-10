@@ -53,7 +53,7 @@ export function AdminUserStageControl({ userId }: { userId: string }) {
   const info = stageLabels[currentStage];
 
   return (
-    <div className="bg-[#232640] rounded-[10px] px-4 py-3 mb-4">
+    <div className="bg-surface-2 rounded-[10px] px-4 py-3 mb-4">
       <div className="flex items-center justify-between mb-3">
         <span className="text-[12px] text-gray-500">ステージ</span>
         <span className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${info.color}`}>
@@ -64,8 +64,8 @@ export function AdminUserStageControl({ userId }: { userId: string }) {
         <select
           value={newStage}
           onChange={(e) => setNewStage(Number(e.target.value))}
-          className="w-full bg-[#1a1d2e] rounded-[6px] px-3 py-2 text-[13px] focus:outline-none"
-          style={{ border: "0.5px solid #333355" }}
+          className="w-full bg-surface-1 rounded-[6px] px-3 py-2 text-[13px] focus:outline-none"
+          style={{ border: "0.5px solid var(--border)" }}
         >
           <option value={1}>優良</option>
           <option value={2}>一般</option>
@@ -76,13 +76,13 @@ export function AdminUserStageControl({ userId }: { userId: string }) {
           value={reason}
           onChange={(e) => setReason(e.target.value)}
           placeholder="変更理由（必須）"
-          className="w-full bg-[#1a1d2e] rounded-[6px] px-3 py-2 text-[13px] focus:outline-none resize-none"
-          style={{ border: "0.5px solid #333355", minHeight: 60 }}
+          className="w-full bg-surface-1 rounded-[6px] px-3 py-2 text-[13px] focus:outline-none resize-none"
+          style={{ border: "0.5px solid var(--border)", minHeight: 60 }}
         />
         <button
           onClick={handleUpdate}
           disabled={loading || newStage === currentStage || !reason.trim()}
-          className="w-full bg-[#3d4070] text-white rounded-[6px] px-3 py-2 text-[13px] font-medium hover:opacity-90 disabled:opacity-50"
+          className="w-full bg-primary text-primary-foreground rounded-[6px] px-3 py-2 text-[13px] font-medium hover:opacity-90 disabled:opacity-50"
         >
           変更
         </button>
