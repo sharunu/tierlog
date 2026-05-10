@@ -131,7 +131,6 @@ export function ShareModal({ type, data, onClose }: Props) {
             .from("share-images")
             .upload(filePath, imageBlob, {
               contentType: "image/png",
-              upsert: true,
               cacheControl: "604800",
             });
           if (uploadError) throw uploadError;
