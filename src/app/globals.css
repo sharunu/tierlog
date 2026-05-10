@@ -1,18 +1,54 @@
 @import "tailwindcss";
 
 :root {
+  /* 既存維持 (DESIGN.md §4 Migration Rules) */
   --background: #0f172a;
   --foreground: #e2e8f0;
+
   --card: #1e293b;
   --card-foreground: #e2e8f0;
+
   --primary: #6366f1;
   --primary-foreground: #ffffff;
-  --accent: #f59e0b;
-  --destructive: #ef4444;
+
   --success: #22c55e;
+  --destructive: #ef4444;
+
   --muted: #334155;
   --muted-foreground: #94a3b8;
+
   --border: #334155;
+
+  /* Surface 階層 (DESIGN.md §3 Depth Model) */
+  --surface-1: #1a1d2e;
+  --surface-2: #232640;
+  --surface-3: #2a2d48;
+
+  /* Warning + accent alias (DESIGN.md §4 Migration Rules) */
+  --warning: #f59e0b;
+  --accent: var(--warning);
+
+  /* Border 階層 */
+  --border-subtle: rgba(100, 116, 139, 0.3);
+  --border-strong: #475569;
+
+  /* Chart palette (DESIGN.md §4 Color Tokens) */
+  --chart-1: #6366f1;
+  --chart-2: #f59e0b;
+  --chart-3: #22c55e;
+  --chart-4: #ef4444;
+  --chart-5: #3b82f6;
+  --chart-6: #ec4899;
+  --chart-7: #14b8a6;
+  --chart-8: #64748b;
+
+  /* Win Rate gradient (DESIGN.md §8 Win Rate Display) */
+  --win-rate-high: #50c878;
+  --win-rate-mid-high: #7dcea0;
+  --win-rate-mid: #f0a030;
+  --win-rate-mid-low: #e87585;
+  --win-rate-low: #e85d75;
+  --win-rate-empty: #8888aa;
 }
 
 @theme inline {
@@ -22,12 +58,38 @@
   --color-card-foreground: var(--card-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --color-accent: var(--accent);
-  --color-destructive: var(--destructive);
   --color-success: var(--success);
+  --color-destructive: var(--destructive);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-border: var(--border);
+  --color-accent: var(--accent);
+
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+
+  --color-warning: var(--warning);
+
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-chart-6: var(--chart-6);
+  --color-chart-7: var(--chart-7);
+  --color-chart-8: var(--chart-8);
+
+  --color-win-rate-high: var(--win-rate-high);
+  --color-win-rate-mid-high: var(--win-rate-mid-high);
+  --color-win-rate-mid: var(--win-rate-mid);
+  --color-win-rate-mid-low: var(--win-rate-mid-low);
+  --color-win-rate-low: var(--win-rate-low);
+  --color-win-rate-empty: var(--win-rate-empty);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
