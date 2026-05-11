@@ -54,3 +54,6 @@ cloudflare-env.d.ts
 .claude/*
 !.claude/agents/
 !.claude/commands/
+
+# local temporary files
+.tmp/
