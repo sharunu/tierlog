@@ -19,18 +19,23 @@ type ThemeContextValue = {
 const ThemeContext = createContext<ThemeContextValue | null>(null);
 
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-  const [theme, setThemeState] = useState<Theme>(() => {
-    if (typeof window === "undefined") return "dark";
-    return readStoredTheme();
-  });
-  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>(() => {
-    if (typeof window === "undefined") return "dark";
-    return resolveTheme(readStoredTheme());
-  });
+  // SSR と client 初回 hydration の HTML を一致させるため、初期 state は常に "dark"。
+  // mount 後の useEffect で localStorage から実値に sync する。data-theme 属性は
+  // <head> の inline script (layout.tsx) が hydration 前に正しい値を付与しているので
+  // 見た目の FOUC は発生しない。ここで sync するのは ThemeToggle 等の React state
+  // 依存の UI を実際の選択値と一致させるため。
+  const [theme, setThemeState] = useState<Theme>("dark");
+  const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("dark");
 
   useEffect(() => {
-    applyThemeToDocument(resolvedTheme);
-  }, [resolvedTheme]);
+    const stored = readStoredTheme();
+    const resolved = resolveTheme(stored);
+    // SSR/client localStorage sync (one-time mount hydration、cascading-renders 警告は意図的に許容)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setThemeState(stored);
+    setResolvedTheme(resolved);
+    applyThemeToDocument(resolved);
+  }, []);
 
   useEffect(() => {
     if (theme !== "system") return;

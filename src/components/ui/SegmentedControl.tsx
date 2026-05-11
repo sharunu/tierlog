@@ -39,14 +39,28 @@ export function SegmentedControl<V extends string>({
   className,
 }: Props<V>) {
   const isTablist = role === "tablist";
+  const isRadiogroup = role === "radiogroup";
   const containerClass = buildContainerClass({ variant, fullWidth, pill, className });
+
+  const handleKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (onKeyDown) onKeyDown(e);
+    if (!isRadiogroup) return;
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    const enabled = items.filter((i) => !i.disabled);
+    const currentIdx = enabled.findIndex((i) => i.value === value);
+    if (currentIdx === -1) return;
+    const delta = e.key === "ArrowRight" ? 1 : -1;
+    const next = enabled[(currentIdx + delta + enabled.length) % enabled.length];
+    if (next) onChange(next.value);
+    e.preventDefault();
+  };
 
   return (
     <div
       role={role}
       aria-label={ariaLabel}
       className={containerClass}
-      onKeyDown={onKeyDown}
+      onKeyDown={handleKeyDown}
     >
       {items.map((item) => {
         const isActive = item.value === value;
@@ -59,16 +73,20 @@ export function SegmentedControl<V extends string>({
           disabled: !!item.disabled,
         });
 
+        const childRole = isTablist ? "tab" : isRadiogroup ? "radio" : undefined;
+        const rovingTabIndex = isTablist || isRadiogroup ? (isActive ? 0 : -1) : undefined;
+
         return (
           <button
             key={item.value}
             type="button"
-            role={isTablist ? "tab" : undefined}
+            role={childRole}
             id={isTablist && itemIdPrefix ? `${itemIdPrefix}-tab-${item.value}` : undefined}
             aria-selected={isTablist ? isActive : undefined}
+            aria-checked={isRadiogroup ? isActive : undefined}
             aria-controls={item.ariaControls}
             aria-disabled={item.disabled || undefined}
-            tabIndex={isTablist ? (isActive ? 0 : -1) : undefined}
+            tabIndex={rovingTabIndex}
             onClick={() => {
               if (!item.disabled) onChange(item.value);
             }}
