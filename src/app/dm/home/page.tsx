@@ -204,7 +204,7 @@ function HomePageInner() {
     return (
       <>
         <div className="min-h-screen pb-20 px-4 pt-6 max-w-lg mx-auto">
-          <p className="text-center text-red-400 py-12 text-sm">{error}</p>
+          <p className="text-center text-destructive py-12 text-sm">{error}</p>
         </div>
         <BottomNav />
       </>
@@ -234,7 +234,7 @@ function HomePageInner() {
     const memberStats = teamMemberStats[team.id];
 
     return (
-      <div key={team.id} className="rounded-xl border border-muted/20 overflow-hidden">
+      <div key={team.id} className="rounded-xl border border-border-subtle overflow-hidden">
         <div className="flex items-center gap-2">
           <button
             onClick={() => isShared && toggleTeamExpand(team.id)}
@@ -362,13 +362,13 @@ function HomePageInner() {
           </div>
         )}
         {discordStatus === "error" && (
-          <div className="rounded-lg bg-red-500/10 border border-red-500/30 px-4 py-3 text-sm text-red-400">
+          <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive">
             Discord連携に失敗しました。もう一度お試しください。
           </div>
         )}
 
         {!connection ? (
-          <div className="rounded-xl border border-muted/30 p-6 space-y-4">
+          <div className="rounded-xl border border-border p-6 space-y-4">
             <div className="space-y-2">
               <h2 className="text-base font-bold">Discord連携</h2>
               <p className="text-sm text-muted-foreground">
@@ -391,7 +391,7 @@ function HomePageInner() {
           </div>
         ) : (
           <>
-            <div className="rounded-xl border border-muted/30 p-4 space-y-3">
+            <div className="rounded-xl border border-border p-4 space-y-3">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2 min-w-0">
                   <div className="w-8 h-8 rounded-full flex items-center justify-center" style={{ backgroundColor: "#5865F2" }}>
@@ -407,7 +407,7 @@ function HomePageInner() {
                 <button
                   onClick={handleDisconnect}
                   disabled={disconnecting}
-                  className="text-xs text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
+                  className="text-xs text-destructive hover:opacity-80 transition-opacity disabled:opacity-50"
                 >
                   {disconnecting ? "解除中..." : "連携解除"}
                 </button>

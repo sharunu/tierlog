@@ -125,7 +125,7 @@ function SortableDeckItem({
       <button
         {...attributes}
         {...listeners}
-        className="cursor-grab active:cursor-grabbing text-gray-500 hover:text-gray-300 touch-none"
+        className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none"
         tabIndex={-1}
       >
         <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -149,18 +149,18 @@ function SortableDeckItem({
             autoFocus
           />
           <button onClick={() => onUpdate(deck.id)} className="text-[13px] text-primary-soft min-h-[44px] px-2">保存</button>
-          <button onClick={onCancelEdit} className="text-[13px] text-gray-500 min-h-[44px] px-2">取消</button>
+          <button onClick={onCancelEdit} className="text-[13px] text-muted-foreground min-h-[44px] px-2">取消</button>
         </>
       ) : (
         <>
           <span className="flex-1 text-[14px]">{deck.name}</span>
-          <button onClick={() => onToggleCategory(deck.id, deck.category)} className="text-[12px] px-2 py-1 rounded min-h-[44px] text-gray-500 hover:text-gray-300" disabled={loading}>
+          <button onClick={() => onToggleCategory(deck.id, deck.category)} className="text-[12px] px-2 py-1 rounded min-h-[44px] text-muted-foreground hover:text-foreground" disabled={loading}>
             →{categoryCycle[deck.category]}
           </button>
-          <button onClick={() => onToggleActive(deck.id, deck.is_active)} className={`text-[12px] px-2 py-1 rounded min-h-[44px] ${deck.is_active ? "text-success" : "text-gray-500"}`} disabled={loading}>
+          <button onClick={() => onToggleActive(deck.id, deck.is_active)} className={`text-[12px] px-2 py-1 rounded min-h-[44px] ${deck.is_active ? "text-success" : "text-muted-foreground"}`} disabled={loading}>
             {deck.is_active ? "有効" : "無効"}
           </button>
-          <button onClick={() => onStartEdit(deck.id, deck.name)} className="text-[12px] text-gray-500 hover:text-gray-300 min-h-[44px] px-2" disabled={loading}>編集</button>
+          <button onClick={() => onStartEdit(deck.id, deck.name)} className="text-[12px] text-muted-foreground hover:text-foreground min-h-[44px] px-2" disabled={loading}>編集</button>
           <button onClick={() => onDelete(deck.id)} className="text-[12px] text-destructive hover:opacity-80 min-h-[44px] px-2" disabled={loading}>削除</button>
         </>
       )}
@@ -201,9 +201,9 @@ function SortableCategoryList({
 
   return (
     <div className="bg-surface-2 rounded-[10px] px-4 py-4">
-      <h3 className="text-[13px] font-medium text-gray-400 mb-2">{categoryLabel}</h3>
+      <h3 className="text-[13px] font-medium text-muted-foreground mb-2">{categoryLabel}</h3>
       {categoryDecks.length === 0 ? (
-        <p className="text-center text-gray-500 py-4 text-sm">{categoryLabel}デッキなし</p>
+        <p className="text-center text-muted-foreground py-4 text-sm">{categoryLabel}デッキなし</p>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={categoryDecks.map((d) => d.id)} strategy={verticalListSortingStrategy}>
@@ -664,7 +664,7 @@ export function OpponentDeckManager({
         {(["major", "minor", "other"] as const).map((cat) => (
           <button key={cat} type="button" onClick={() => setNewCategory(cat)}
             className={`rounded-[6px] px-3 py-2 text-[13px] transition-colors ${
-              newCategory === cat ? "bg-primary text-white" : "bg-surface-2 text-gray-400 border border-gray-600"
+              newCategory === cat ? "bg-primary text-white" : "bg-surface-2 text-muted-foreground border border-border"
             }`}
           >{cat}</button>
         ))}
@@ -673,7 +673,7 @@ export function OpponentDeckManager({
         <input type="text" placeholder="デッキ名を入力" value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleAdd()}
-          className="flex-1 bg-surface-1 rounded-[6px] px-3 py-2 text-[14px] placeholder:text-gray-500 focus:outline-none"
+          className="flex-1 bg-surface-1 rounded-[6px] px-3 py-2 text-[14px] placeholder:text-muted-foreground focus:outline-none"
         />
         <button onClick={handleAdd} disabled={loading || !newName.trim()}
           className="bg-primary text-white rounded-[6px] px-4 py-2 text-[13px] font-medium hover:opacity-90 disabled:opacity-50"
@@ -698,25 +698,25 @@ export function OpponentDeckManager({
     <div className="space-y-4">
       {/* Mode selector */}
       <div className="bg-surface-2 rounded-[10px] px-4 py-4">
-        <p className="text-[12px] text-gray-500 mb-2">管理モード</p>
+        <p className="text-[12px] text-muted-foreground mb-2">管理モード</p>
         <div className="flex gap-2 flex-wrap">
           <button onClick={() => handleModeChange("admin")} disabled={applying}
             className={`flex-1 min-w-[120px] rounded-[6px] px-3 py-3 text-[13px] transition-colors min-h-[44px] ${
               mode === "admin" ? "bg-primary/15 border border-primary text-primary-soft"
-                : "bg-surface-1 border border-transparent text-gray-400"
+                : "bg-surface-1 border border-transparent text-muted-foreground"
             }`}
           >完全管理者依存</button>
           <button onClick={() => handleModeChange("auto")} disabled={applying}
             className={`flex-1 min-w-[120px] rounded-[6px] px-3 py-3 text-[13px] transition-colors min-h-[44px] ${
               mode === "auto" ? "bg-primary/15 border border-primary text-primary-soft"
-                : "bg-surface-1 border border-transparent text-gray-400"
+                : "bg-surface-1 border border-transparent text-muted-foreground"
             }`}
           >ユーザー入力依存</button>
           {game === "pokepoke" && (
             <button onClick={() => handleModeChange("limitless")} disabled={applying}
               className={`flex-1 min-w-[120px] rounded-[6px] px-3 py-3 text-[13px] transition-colors min-h-[44px] ${
                 mode === "limitless" ? "bg-primary/15 border border-primary text-primary-soft"
-                  : "bg-surface-1 border border-transparent text-gray-400"
+                  : "bg-surface-1 border border-transparent text-muted-foreground"
               }`}
             >LimitLessTCG依存</button>
           )}
@@ -725,7 +725,7 @@ export function OpponentDeckManager({
 
       {/* Help */}
       <button onClick={() => setShowHelp(!showHelp)}
-        className="flex items-center gap-1 text-[12px] text-gray-500 hover:text-gray-300 transition-colors"
+        className="flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground transition-colors"
       >
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
           className={`transition-transform ${showHelp ? "rotate-90" : ""}`}
@@ -733,7 +733,7 @@ export function OpponentDeckManager({
         {showHelp ? "各モードの説明を閉じる" : "各モードの説明"}
       </button>
       {showHelp && (
-        <div className="bg-surface-1 rounded-[10px] px-4 py-4 text-[12px] text-gray-400 space-y-3">
+        <div className="bg-surface-1 rounded-[10px] px-4 py-4 text-[12px] text-muted-foreground space-y-3">
           <div>
             <p className="text-gray-300 font-medium mb-1">■ 共通</p>
             <ul className="space-y-0.5 list-disc list-inside">
@@ -764,7 +764,7 @@ export function OpponentDeckManager({
 
       {mode === "limitless" ? (
         <>
-          <div className="bg-surface-1 rounded-[10px] px-4 py-3 text-[12px] text-gray-400 leading-relaxed">
+          <div className="bg-surface-1 rounded-[10px] px-4 py-3 text-[12px] text-muted-foreground leading-relaxed">
             LimitlessTCG の公式大会 <span className="text-gray-200">standard</span> データを既存キャッシュとして表示し、
             ポケポケの <span className="text-gray-200">RANKED / RANDOM</span> 両フォーマットに流用しています。
             APIキー受領まで新規取得は停止中です。
@@ -774,7 +774,7 @@ export function OpponentDeckManager({
           {/* 同期状態 */}
           <div className="bg-surface-2 rounded-[10px] px-4 py-4 space-y-2">
             <div className="flex items-center justify-between">
-              <div className="text-[12px] text-gray-400">
+              <div className="text-[12px] text-muted-foreground">
                 最終取得:{" "}
                 <span className="text-gray-200">
                   {savedSettingsRef.current?.limitless_last_synced_at
@@ -782,7 +782,7 @@ export function OpponentDeckManager({
                     : "未取得"}
                 </span>
                 {savedSettingsRef.current?.limitless_last_sync_status && (
-                  <span className="ml-2 text-gray-500">
+                  <span className="ml-2 text-muted-foreground">
                     ({savedSettingsRef.current.limitless_last_sync_status})
                   </span>
                 )}
@@ -797,13 +797,13 @@ export function OpponentDeckManager({
             </div>
             <p className="text-[11px] text-amber-300/80">{LIMITLESS_SYNC_PAUSED_MESSAGE}</p>
             {limitlessMessage && (
-              <p className="text-[11px] text-gray-500">{limitlessMessage}</p>
+              <p className="text-[11px] text-muted-foreground">{limitlessMessage}</p>
             )}
           </div>
 
           {/* 分類方式 */}
           <div className="bg-surface-2 rounded-[10px] px-4 py-4 space-y-3">
-            <p className="text-[13px] font-medium text-gray-400">分類方式</p>
+            <p className="text-[13px] font-medium text-muted-foreground">分類方式</p>
             <div className="flex gap-2">
               <label className={`flex-1 flex items-center gap-2 cursor-pointer rounded-[6px] px-3 py-2 text-[13px] border ${
                 classificationMethod === "threshold"
@@ -839,14 +839,14 @@ export function OpponentDeckManager({
             {classificationMethod === "threshold" ? (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[12px] text-gray-500 block mb-1">major 閾値 (%)</label>
+                  <label className="text-[12px] text-muted-foreground block mb-1">major 閾値 (%)</label>
                   <input type="text" inputMode="decimal" value={majorThresholdStr}
                     onChange={(e) => { setMajorThresholdStr(e.target.value); setDirty(true); }}
                     className="w-full bg-surface-1 rounded-[6px] px-3 py-2 text-[14px] focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>
                 <div>
-                  <label className="text-[12px] text-gray-500 block mb-1">minor 閾値 (%)</label>
+                  <label className="text-[12px] text-muted-foreground block mb-1">minor 閾値 (%)</label>
                   <input type="text" inputMode="decimal" value={minorThresholdStr}
                     onChange={(e) => { setMinorThresholdStr(e.target.value); setDirty(true); }}
                     className="w-full bg-surface-1 rounded-[6px] px-3 py-2 text-[14px] focus:outline-none focus:ring-1 focus:ring-indigo-500"
@@ -856,14 +856,14 @@ export function OpponentDeckManager({
             ) : (
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="text-[12px] text-gray-500 block mb-1">major デッキ数</label>
+                  <label className="text-[12px] text-muted-foreground block mb-1">major デッキ数</label>
                   <input type="text" inputMode="numeric" value={majorFixedCountStr}
                     onChange={(e) => { setMajorFixedCountStr(e.target.value); setDirty(true); }}
                     className="w-full bg-surface-1 rounded-[6px] px-3 py-2 text-[14px] focus:outline-none focus:ring-1 focus:ring-indigo-500"
                   />
                 </div>
                 <div>
-                  <label className="text-[12px] text-gray-500 block mb-1">minor デッキ数</label>
+                  <label className="text-[12px] text-muted-foreground block mb-1">minor デッキ数</label>
                   <input type="text" inputMode="numeric" value={minorFixedCountStr}
                     onChange={(e) => { setMinorFixedCountStr(e.target.value); setDirty(true); }}
                     className="w-full bg-surface-1 rounded-[6px] px-3 py-2 text-[14px] focus:outline-none focus:ring-1 focus:ring-indigo-500"
@@ -871,7 +871,7 @@ export function OpponentDeckManager({
                 </div>
               </div>
             )}
-            <p className="text-[11px] text-gray-500">
+            <p className="text-[11px] text-muted-foreground">
               ※「変更内容反映」ボタンで設定を保存し、同時に LimitlessTCG 再取得＆カテゴリ再計算を行います。
             </p>
           </div>
@@ -883,9 +883,9 @@ export function OpponentDeckManager({
               .sort((a, b) => (b.limitless_share ?? 0) - (a.limitless_share ?? 0));
             return (
               <div key={cat} className="bg-surface-2 rounded-[10px] px-4 py-4">
-                <h3 className="text-[13px] font-medium text-gray-400 mb-2">{cat}</h3>
+                <h3 className="text-[13px] font-medium text-muted-foreground mb-2">{cat}</h3>
                 {catDecks.length === 0 ? (
-                  <p className="text-center text-gray-500 py-4 text-sm">{cat} デッキなし</p>
+                  <p className="text-center text-muted-foreground py-4 text-sm">{cat} デッキなし</p>
                 ) : (
                   <ul className="space-y-2">
                     {catDecks.map((deck) => {
@@ -900,9 +900,9 @@ export function OpponentDeckManager({
                             )}
                           </div>
                           {deck.name_en && deck.name_en !== displayJa && (
-                            <div className="text-[11px] text-gray-500">{deck.name_en}</div>
+                            <div className="text-[11px] text-muted-foreground">{deck.name_en}</div>
                           )}
-                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-gray-400">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] text-muted-foreground">
                             <span>share: <span className="text-gray-200">{deck.limitless_share?.toFixed(2) ?? "-"}%</span></span>
                             <span>count: {deck.limitless_count ?? "-"}</span>
                             <span>
@@ -911,7 +911,7 @@ export function OpponentDeckManager({
                             <span>Win%: {deck.limitless_win_pct?.toFixed(2) ?? "-"}</span>
                           </div>
                           <div className="flex items-center gap-2 pt-1">
-                            <label className="text-[11px] text-gray-500">和名:</label>
+                            <label className="text-[11px] text-muted-foreground">和名:</label>
                             <input
                               type="text"
                               value={nameJaValue}
@@ -943,31 +943,31 @@ export function OpponentDeckManager({
         <>
           {/* Settings */}
           <div className="bg-surface-2 rounded-[10px] px-4 py-4 space-y-3">
-            <p className="text-[13px] font-medium text-gray-400">設定</p>
+            <p className="text-[13px] font-medium text-muted-foreground">設定</p>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-[12px] text-gray-500 block mb-1">major閾値 (%)</label>
+                <label className="text-[12px] text-muted-foreground block mb-1">major閾値 (%)</label>
                 <input type="text" inputMode="decimal" value={majorThresholdStr}
                   onChange={(e) => { setMajorThresholdStr(e.target.value); setDirty(true); }}
                   className="w-full bg-surface-1 rounded-[6px] px-3 py-2 text-[14px] focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
               <div>
-                <label className="text-[12px] text-gray-500 block mb-1">minor閾値 (%)</label>
+                <label className="text-[12px] text-muted-foreground block mb-1">minor閾値 (%)</label>
                 <input type="text" inputMode="decimal" value={minorThresholdStr}
                   onChange={(e) => { setMinorThresholdStr(e.target.value); setDirty(true); }}
                   className="w-full bg-surface-1 rounded-[6px] px-3 py-2 text-[14px] focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
               <div>
-                <label className="text-[12px] text-gray-500 block mb-1">算出期間 (日)</label>
+                <label className="text-[12px] text-muted-foreground block mb-1">算出期間 (日)</label>
                 <input type="text" inputMode="numeric" value={usagePeriodStr}
                   onChange={(e) => { setUsagePeriodStr(e.target.value); setDirty(true); }}
                   className="w-full bg-surface-1 rounded-[6px] px-3 py-2 text-[14px] focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 />
               </div>
               <div>
-                <label className="text-[12px] text-gray-500 block mb-1">無効化期間 (日)</label>
+                <label className="text-[12px] text-muted-foreground block mb-1">無効化期間 (日)</label>
                 <input type="text" inputMode="numeric" value={disablePeriodStr}
                   onChange={(e) => { setDisablePeriodStr(e.target.value); setDirty(true); }}
                   className="w-full bg-surface-1 rounded-[6px] px-3 py-2 text-[14px] focus:outline-none focus:ring-1 focus:ring-indigo-500"
@@ -981,18 +981,18 @@ export function OpponentDeckManager({
             >
               {trialCalcing ? "計算中..." : "試し計算"}
             </button>
-            <p className="text-[11px] text-gray-500">※現在の設定値・付与数でカテゴリを再計算し結果をプレビューします</p>
+            <p className="text-[11px] text-muted-foreground">※現在の設定値・付与数でカテゴリを再計算し結果をプレビューします</p>
           </div>
 
           {addForm}
 
           {/* Stats list */}
           <div className="bg-surface-2 rounded-[10px] px-4 py-4">
-            <p className="text-[13px] font-medium text-gray-400 mb-3">デッキ一覧</p>
+            <p className="text-[13px] font-medium text-muted-foreground mb-3">デッキ一覧</p>
             {!statsLoaded ? (
-              <p className="text-center text-gray-500 py-4 text-sm">読み込み中...</p>
+              <p className="text-center text-muted-foreground py-4 text-sm">読み込み中...</p>
             ) : statsDecks.length === 0 ? (
-              <p className="text-center text-gray-500 py-4 text-sm">デッキなし</p>
+              <p className="text-center text-muted-foreground py-4 text-sm">デッキなし</p>
             ) : (
               <ul className="space-y-2">
                 {statsDecks.map((deck) => (
@@ -1003,7 +1003,7 @@ export function OpponentDeckManager({
                           onKeyDown={(e) => e.key === "Enter" && handleUpdate(deck.id)}
                           className="flex-1 bg-transparent border-b border-primary-soft text-[14px] focus:outline-none" autoFocus />
                         <button onClick={() => handleUpdate(deck.id)} className="text-[13px] text-primary-soft min-h-[44px] px-2">保存</button>
-                        <button onClick={() => setEditingId(null)} className="text-[13px] text-gray-500 min-h-[44px] px-2">取消</button>
+                        <button onClick={() => setEditingId(null)} className="text-[13px] text-muted-foreground min-h-[44px] px-2">取消</button>
                       </div>
                     ) : (
                       <>
@@ -1011,17 +1011,17 @@ export function OpponentDeckManager({
                           <span className="text-[14px] font-medium">{deck.name}</span>
                           <div className="flex items-center gap-2">
                             <button onClick={() => handleToggleActive(deck.id, deck.is_active)}
-                              className={`text-[12px] px-2 py-1 rounded min-h-[36px] ${deck.is_active ? "text-success" : "text-gray-500"}`}
+                              className={`text-[12px] px-2 py-1 rounded min-h-[36px] ${deck.is_active ? "text-success" : "text-muted-foreground"}`}
                               disabled={applying}>
                               {deck.is_active ? "有効" : "無効"}
                             </button>
                             <button onClick={() => { setEditingId(deck.id); setEditName(deck.name); }}
-                              className="text-[12px] text-gray-500 hover:text-gray-300 min-h-[36px] px-1" disabled={applying}>編集</button>
+                              className="text-[12px] text-muted-foreground hover:text-foreground min-h-[36px] px-1" disabled={applying}>編集</button>
                             <button onClick={() => handleDelete(deck.id)}
                               className="text-[12px] text-destructive hover:opacity-80 min-h-[36px] px-1" disabled={applying}>削除</button>
                           </div>
                         </div>
-                        <div className="flex items-center gap-3 text-[12px] text-gray-400">
+                        <div className="flex items-center gap-3 text-[12px] text-muted-foreground">
                           <span>対戦: {deck.battle_count}</span>
                           <span className="flex items-center gap-1">
                             付与:
@@ -1036,7 +1036,7 @@ export function OpponentDeckManager({
                           <span className={`px-1.5 py-0.5 rounded text-[11px] ${
                             deck.category === "major" ? "bg-indigo-900/50 text-indigo-300"
                               : deck.category === "minor" ? "bg-gray-700/50 text-gray-300"
-                              : "bg-gray-800/50 text-gray-500"
+                              : "bg-gray-800/50 text-muted-foreground"
                           }`}>{deck.category}</span>
                         </div>
                       </>

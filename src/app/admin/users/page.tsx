@@ -65,18 +65,18 @@ export default function AdminUsersPage() {
   return (
     <div className="min-h-screen px-4 pt-6 pb-8 max-w-lg mx-auto">
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => router.push("/admin")} className="text-gray-400 hover:text-white">
+        <button onClick={() => router.push("/admin")} className="text-muted-foreground hover:text-foreground">
           <ChevronLeft size={20} />
         </button>
         <h1 className="text-[20px] font-medium">ユーザー一覧</h1>
-        <span className="text-[12px] text-gray-500 ml-auto">{filtered.length}/{users.length}人</span>
+        <span className="text-[12px] text-muted-foreground ml-auto">{filtered.length}/{users.length}人</span>
       </div>
 
       <div className="grid grid-cols-3 gap-2 mb-3">
         <select
           value={stageFilter === "all" ? "all" : String(stageFilter)}
           onChange={(e) => setStageFilter(e.target.value === "all" ? "all" : Number(e.target.value) as StageFilter)}
-          className="bg-surface-1 rounded-[6px] px-2 py-2 text-[12px] focus:outline-none text-white"
+          className="bg-surface-1 rounded-[6px] px-2 py-2 text-[12px] focus:outline-none text-foreground"
           style={{ border: "0.5px solid var(--border)" }}
         >
           <option value="all">全ステージ</option>
@@ -88,7 +88,7 @@ export default function AdminUsersPage() {
         <select
           value={providerFilter}
           onChange={(e) => setProviderFilter(e.target.value as ProviderFilter)}
-          className="bg-surface-1 rounded-[6px] px-2 py-2 text-[12px] focus:outline-none text-white"
+          className="bg-surface-1 rounded-[6px] px-2 py-2 text-[12px] focus:outline-none text-foreground"
           style={{ border: "0.5px solid var(--border)" }}
         >
           <option value="all">全ログイン方法</option>
@@ -100,7 +100,7 @@ export default function AdminUsersPage() {
         <select
           value={xConnectionFilter}
           onChange={(e) => setXConnectionFilter(e.target.value as XConnectionFilter)}
-          className="bg-surface-1 rounded-[6px] px-2 py-2 text-[12px] focus:outline-none text-white"
+          className="bg-surface-1 rounded-[6px] px-2 py-2 text-[12px] focus:outline-none text-foreground"
           style={{ border: "0.5px solid var(--border)" }}
         >
           <option value="all">X連携 全て</option>
@@ -110,7 +110,7 @@ export default function AdminUsersPage() {
       </div>
 
       <div className="relative mb-4">
-        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+        <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
         <input
           type="text"
           value={search}

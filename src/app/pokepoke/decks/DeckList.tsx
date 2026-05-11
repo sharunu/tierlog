@@ -226,7 +226,7 @@ export function DeckList({
       </div>
 
       {decks.length === 0 ? (
-        <p className="text-center text-gray-500 py-6 text-sm">
+        <p className="text-center text-muted-foreground py-6 text-sm">
           デッキを追加してください
         </p>
       ) : (
@@ -250,7 +250,7 @@ export function DeckList({
                         if (e.key === "Enter" && !e.nativeEvent.isComposing) handleUpdate(deck.id);
                       }}
                       onClick={(e) => e.stopPropagation()}
-                      className="flex-1 bg-transparent border-b border-primary text-sm text-white focus:outline-none"
+                      className="flex-1 bg-transparent border-b border-primary text-sm text-foreground focus:outline-none"
                       autoFocus
                     />
                     <button
@@ -261,7 +261,7 @@ export function DeckList({
                     </button>
                     <button
                       onClick={(e) => { e.stopPropagation(); setEditingId(null); }}
-                      className="text-sm text-gray-400"
+                      className="text-sm text-muted-foreground"
                     >
                       取消
                     </button>
@@ -269,8 +269,8 @@ export function DeckList({
                 ) : (
                   <>
                     <div className="flex-1 min-w-0">
-                      <div className="text-[14px] font-medium text-white truncate">{deck.name}</div>
-                      <div className="text-[11px] text-gray-500">チューニング {deck.deck_tunings.length}件</div>
+                      <div className="text-[14px] font-medium text-foreground truncate">{deck.name}</div>
+                      <div className="text-[11px] text-muted-foreground">チューニング {deck.deck_tunings.length}件</div>
                     </div>
                     <button
                       onClick={(e) => {
@@ -294,7 +294,7 @@ export function DeckList({
                     >
                       <X size={16} />
                     </button>
-                    <span className="text-gray-500 text-sm ml-1 w-4 text-center select-none">
+                    <span className="text-muted-foreground text-sm ml-1 w-4 text-center select-none">
                       {isExpanded(deck.id) ? "▾" : "▸"}
                     </span>
                   </>
@@ -320,16 +320,16 @@ export function DeckList({
                             onKeyDown={(e) => {
                               if (e.key === "Enter" && !e.nativeEvent.isComposing) handleUpdateTuning(deck.id, tuning.id);
                             }}
-                            className="flex-1 bg-transparent border-b border-primary text-[13px] text-white focus:outline-none"
+                            className="flex-1 bg-transparent border-b border-primary text-[13px] text-foreground focus:outline-none"
                             autoFocus
                           />
                           <button onClick={() => handleUpdateTuning(deck.id, tuning.id)} className="text-xs text-primary">保存</button>
-                          <button onClick={() => setEditingTuningId(null)} className="text-xs text-gray-400">取消</button>
+                          <button onClick={() => setEditingTuningId(null)} className="text-xs text-muted-foreground">取消</button>
                         </>
                       ) : (
                         <>
                           <div className="w-[3px] self-stretch rounded-sm bg-primary flex-shrink-0" />
-                          <span className="flex-1 text-[13px] text-gray-300">{tuning.name}</span>
+                          <span className="flex-1 text-[13px] text-foreground">{tuning.name}</span>
                           <button
                             onClick={() => { setEditingTuningId(tuning.id); setEditTuningName(tuning.name); }}
                             className="text-xs text-primary"
@@ -356,7 +356,7 @@ export function DeckList({
                       onKeyDown={(e) => {
                         if (e.key === "Enter" && !e.nativeEvent.isComposing) handleCreateTuning(deck.id);
                       }}
-                      className="flex-1 rounded-md bg-surface-2 border-[0.5px] border-border px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none focus:ring-1 focus:ring-primary"
+                      className="flex-1 rounded-md bg-surface-2 border-[0.5px] border-border px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
                     />
                     <button
                       onClick={() => handleCreateTuning(deck.id)}
