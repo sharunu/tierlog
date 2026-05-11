@@ -4,12 +4,15 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
+    "build": ". ./scripts/prepare-cloudflare-env.sh && next build",
     "start": "next start",
     "lint": "eslint",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts"
+    "preview": ". ./scripts/prepare-cloudflare-env.sh && opennextjs-cloudflare build && opennextjs-cloudflare preview",
+    "deploy": ". ./scripts/prepare-cloudflare-env.sh && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
+    "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
+    "staging:sync:globals": "node scripts/sync-staging-data.mjs --globals",
+    "staging:copy:user": "node scripts/sync-staging-data.mjs --user",
+    "staging:refresh": "node scripts/sync-staging-data.mjs --all"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
