@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronLeft, Users, MessageSquare, Swords, ShieldAlert, Star } from "lucide-react";
+import { ChevronLeft, Users, MessageSquare, Swords, ShieldAlert, Star, Settings } from "lucide-react";
 import { getDetectionAlertCount } from "@/lib/actions/admin-actions";
 
 const cards = [
   { title: "対面デッキ管理", description: "対面デッキの追加・編集・並べ替え", href: "/admin/opponent-decks", icon: Swords },
   { title: "ユーザー閲覧", description: "ユーザーのデッキ・履歴・分析を閲覧", href: "/admin/users", icon: Users },
   { title: "フィードバック", description: "ユーザーからのご意見・バグ報告", href: "/admin/feedback", icon: MessageSquare },
+  { title: "一般", description: "共有データ保存期間・期限切れ削除", href: "/admin/general-settings", icon: Settings },
 ];
 
 export default function AdminDashboardPage() {

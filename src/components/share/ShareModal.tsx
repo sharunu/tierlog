@@ -123,6 +123,7 @@ export function ShareModal({ type, data, onClose }: Props) {
 
       // Upload captured image to Supabase Storage so X can use it as og:image
       let imageUrl: string | null = null;
+      let imagePath: string | null = null;
       if (!skipUpload) {
         // upload error 専用 catch — auth / shares INSERT 失敗とは混同しない
         try {
@@ -136,6 +137,9 @@ export function ShareModal({ type, data, onClose }: Props) {
           if (uploadError) throw uploadError;
           const { data: pub } = supabase.storage.from("share-images").getPublicUrl(filePath);
           imageUrl = pub.publicUrl;
+          // PR9 Phase 9b: image_path も明示 INSERT (DB の derive_image_path_from_url trigger
+          // の backfill との二重防御。cleanup 時に Storage 削除パスを安全に取得するため)
+          imagePath = filePath;
         } catch {
           // upload 失敗時のみ警告 UI に遷移、newWindow リーク対策
           if (newWindow && !newWindow.closed) newWindow.close();
@@ -152,6 +156,7 @@ export function ShareModal({ type, data, onClose }: Props) {
         game_title: game,
       };
       if (imageUrl) insertPayload.image_url = imageUrl;
+      if (imagePath) insertPayload.image_path = imagePath;
 
       const { error: insertError } = await supabase
         .from("shares")
