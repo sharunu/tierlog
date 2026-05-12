@@ -38,12 +38,8 @@ export async function recordBattle(formData: {
 
   if (error) throw new Error(error.message);
 
-  // 未登録デッキ自動追加 / last_used_at更新
-  await supabase.rpc('auto_add_opponent_deck', {
-    p_deck_name: formData.opponentDeckName,
-    p_format: formData.format,
-    p_game_title: game,
-  });
+  // 未登録デッキ自動追加 / last_used_at更新は battles AFTER INSERT trigger
+  // (battles_auto_add_opponent_deck, PR6 Phase 6a で導入) が代行する
 }
 
 export async function updateBattle(
