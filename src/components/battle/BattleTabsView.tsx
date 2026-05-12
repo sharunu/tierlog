@@ -66,6 +66,11 @@ type Props = {
   onHistoryRefresh: () => void;
 
   opponentDeckNameMap?: OpponentDeckNameMap;
+
+  // PR8: cursor-based pagination
+  hasMore?: boolean;
+  loadMoreLoading?: boolean;
+  onLoadMore?: () => void;
 };
 
 function readInitialTab(sp: URLSearchParams | null): TabKey {
@@ -290,6 +295,10 @@ export function BattleTabsView(props: Props) {
                     suggestions={props.suggestions}
                     onRefresh={props.onHistoryRefresh}
                     opponentDeckNameMap={props.opponentDeckNameMap}
+                    hasMore={props.hasMore}
+                    loadMoreLoading={props.loadMoreLoading}
+                    onLoadMore={props.onLoadMore}
+                    deckFilterActive={props.selectedDeck != null}
                   />
                 </>
               )}

@@ -3,11 +3,12 @@
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { getDecks } from "@/lib/actions/deck-actions";
 import {
-  getBattlesByDateRange,
+  getBattlesByDateRangePaginated,
   getDailyBattleCounts,
   getOpponentDeckSuggestions,
   getMiniStats,
   hasAnyBattles,
+  type BattleListCursor,
 } from "@/lib/actions/battle-actions";
 import { checkIsAdmin } from "@/lib/actions/admin-actions";
 import {
@@ -56,6 +57,10 @@ function BattlePageInner() {
   const [inputLoading, setInputLoading] = useState(true);
 
   const [battles, setBattles] = useState<Battle[]>([]);
+  // PR8: cursor-based pagination (50 件/ページ)
+  const [cursor, setCursor] = useState<BattleListCursor | null>(null);
+  const [hasMore, setHasMore] = useState<boolean>(false);
+  const [loadMoreLoading, setLoadMoreLoading] = useState<boolean>(false);
   const [selectedDeck, setSelectedDeck] = useState<string | null>(null);
   const [battleCounts, setBattleCounts] = useState<Record<string, number>>({});
   const [hasAny, setHasAny] = useState<boolean | null>(null);
@@ -101,21 +106,40 @@ function BattlePageInner() {
     if (!ready) return;
     setHistoryLoading(true);
     Promise.all([
-      getBattlesByDateRange(format, startDate, endDate, "pokepoke"),
+      getBattlesByDateRangePaginated(format, startDate, endDate, null, 50, "pokepoke"),
       hasAnyBattles(format, "pokepoke"),
       getOpponentDeckNameMap(format, "pokepoke"),
     ])
-      .then(([b, any, map]) => {
-        setBattles(b as Battle[]);
+      .then(([result, any, map]) => {
+        setBattles(result.rows as unknown as Battle[]);
+        setCursor(result.nextCursor);
+        setHasMore(result.hasMore);
         setHasAny(any);
         setNameMap(map);
         setHistoryLoading(false);
       })
-      .catch(() => {
+      .catch((e) => {
+        console.error("Failed to load battles", e);
         setError("データの読み込みに失敗しました");
         setHistoryLoading(false);
       });
   }, [format, startDate, endDate, ready]);
+
+  const loadMore = useCallback(() => {
+    if (!ready || !cursor || loadMoreLoading) return;
+    setLoadMoreLoading(true);
+    getBattlesByDateRangePaginated(format, startDate, endDate, cursor, 50, "pokepoke")
+      .then((result) => {
+        setBattles((prev) => [...prev, ...(result.rows as unknown as Battle[])]);
+        setCursor(result.nextCursor);
+        setHasMore(result.hasMore);
+        setLoadMoreLoading(false);
+      })
+      .catch((e) => {
+        console.error("Failed to load more battles", e);
+        setLoadMoreLoading(false);
+      });
+  }, [format, startDate, endDate, ready, cursor, loadMoreLoading]);
 
   const loadCounts = useCallback(
     (year: number, month: number) => {
@@ -200,6 +224,9 @@ function BattlePageInner() {
         historyLoading={historyLoading}
         onHistoryRefresh={handleHistoryRefresh}
         opponentDeckNameMap={nameMap}
+        hasMore={hasMore}
+        loadMoreLoading={loadMoreLoading}
+        onLoadMore={loadMore}
       />
     );
   }, [
@@ -222,6 +249,9 @@ function BattlePageInner() {
     historyLoading,
     handleHistoryRefresh,
     nameMap,
+    hasMore,
+    loadMoreLoading,
+    loadMore,
   ]);
 
   return (

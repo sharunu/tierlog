@@ -209,6 +209,71 @@ export async function getBattlesByDateRange(format: string, startDate: string, e
   return data ?? [];
 }
 
+/**
+ * PR8 (Phase 2 hardening): cursor-based pagination 版の battles 取得関数。
+ * Resolved Decision [PR8-pagination-policy] に従い 50 件/ページの cursor-based pagination を
+ * 提供する。cursor は直前ページ末尾の (fought_at, id) を保持し、次ページは
+ * (fought_at, id) < (cursor.foughtAt, cursor.id) の tuple 比較で安定取得する。
+ * offset-based は途中で行が挿入されると重複/抜けが出るため不採用。
+ *
+ * - cursor === null: 1 ページ目
+ * - cursor !== null: cursor より「古い」行のみ取得
+ * - 内部で limit+1 件取得し、hasMore = (result.length > limit) で判定
+ * - nextCursor = hasMore ? { foughtAt, id } : null
+ */
+export type BattleListCursor = { foughtAt: string; id: string };
+
+export async function getBattlesByDateRangePaginated(
+  format: string,
+  startDate: string,
+  endDate: string,
+  cursor: BattleListCursor | null = null,
+  limit: number = 50,
+  game: GameSlug = DEFAULT_GAME
+): Promise<{ rows: Array<Record<string, unknown>>; hasMore: boolean; nextCursor: BattleListCursor | null }> {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { rows: [], hasMore: false, nextCursor: null };
+
+  const endPlusOne = new Date(endDate);
+  endPlusOne.setDate(endPlusOne.getDate() + 1);
+  const endPlusOneStr = endPlusOne.toISOString().split("T")[0];
+
+  let q = supabase
+    .from("battles")
+    .select("*")
+    .eq("user_id", user.id)
+    .eq("game_title", game)
+    .eq("format", format)
+    .gte("fought_at", startDate)
+    .lt("fought_at", endPlusOneStr);
+
+  // cursor tuple 比較: (fought_at < cursor.foughtAt) OR (fought_at = cursor.foughtAt AND id < cursor.id)
+  // PostgREST の or() 構文で表現。fought_at 同秒の境界でも安定。
+  if (cursor) {
+    q = q.or(
+      `fought_at.lt.${cursor.foughtAt},and(fought_at.eq.${cursor.foughtAt},id.lt.${cursor.id})`
+    );
+  }
+
+  const { data, error } = await q
+    .order("fought_at", { ascending: false })
+    .order("id", { ascending: false })
+    .limit(limit + 1);
+
+  if (error) throw new Error(`getBattlesByDateRangePaginated failed: ${error.message}`);
+
+  const all = (data ?? []) as Array<Record<string, unknown>>;
+  const hasMore = all.length > limit;
+  const rows = hasMore ? all.slice(0, limit) : all;
+  const last = rows[rows.length - 1];
+  const nextCursor: BattleListCursor | null = hasMore && last
+    ? { foughtAt: String(last.fought_at), id: String(last.id) }
+    : null;
+
+  return { rows, hasMore, nextCursor };
+}
+
 export async function hasAnyBattles(format: string, game: GameSlug = DEFAULT_GAME): Promise<boolean> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();

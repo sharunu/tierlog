@@ -33,6 +33,12 @@ type Props = {
   onRefresh?: () => void;
   readOnly?: boolean;
   opponentDeckNameMap?: OpponentDeckNameMap;
+  // PR8: cursor-based pagination (省略可、未指定なら「もっと読む」ボタン非表示)
+  hasMore?: boolean;
+  loadMoreLoading?: boolean;
+  onLoadMore?: () => void;
+  // deck filter が active のときは server cursor の意味が変わるため、UI 注記用フラグ
+  deckFilterActive?: boolean;
 };
 
 function formatTime(dateStr: string) {
@@ -53,7 +59,7 @@ function groupByDate(battles: Battle[]): { date: string; battles: Battle[] }[] {
   return Array.from(map.entries()).map(([date, battles]) => ({ date, battles }));
 }
 
-export function BattleHistoryList({ battles, decks, suggestions, onRefresh, readOnly, opponentDeckNameMap }: Props) {
+export function BattleHistoryList({ battles, decks, suggestions, onRefresh, readOnly, opponentDeckNameMap, hasMore, loadMoreLoading, onLoadMore, deckFilterActive }: Props) {
   const [editingBattle, setEditingBattle] = useState<Battle | null>(null);
 
   if (battles.length === 0) {
@@ -204,6 +210,24 @@ export function BattleHistoryList({ battles, decks, suggestions, onRefresh, read
           </div>
         ))}
       </div>
+
+      {hasMore && onLoadMore && (
+        <div className="flex flex-col items-center mt-4 mb-2 gap-1">
+          <button
+            type="button"
+            onClick={onLoadMore}
+            disabled={loadMoreLoading}
+            className="px-4 py-2 rounded-[8px] bg-primary/10 text-primary text-sm font-medium disabled:opacity-50"
+          >
+            {loadMoreLoading ? "読み込み中..." : "もっと読む"}
+          </button>
+          {deckFilterActive && (
+            <span className="text-[10px] text-muted-foreground/60">
+              ※ デッキ絞り込み中。さらに過去の対戦も含めて読み込みます
+            </span>
+          )}
+        </div>
+      )}
 
       {!readOnly && editingBattle && (
         <EditBattleModal
