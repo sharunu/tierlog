@@ -71,9 +71,31 @@ export async function hasGoogleIdentity(): Promise<boolean> {
 }
 
 export async function deleteAccount(): Promise<void> {
+  // PR10 Phase A: rpc("delete_own_account") から /api/account/delete (Bearer JWT) へ切替。
+  // 旧 RPC は Phase B で DROP 予定。
+  // 順序: shares パス収集 → Storage list → auth.admin.deleteUser → 成功時のみ Storage 削除。
+  // 呼び出し側 (security/page.tsx) は成功後に supabase.auth.signOut() + /auth リダイレクト済。
   const supabase = createClient();
-  const { error } = await supabase.rpc("delete_own_account");
-  if (error) throw error;
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  if (!session) throw new Error("Not authenticated");
+
+  const res = await fetch("/api/account/delete", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${session.access_token}`,
+    },
+  });
+
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as {
+      error?: string;
+      reason?: string;
+    };
+    throw new Error(`${res.status}: ${body.reason ?? body.error ?? "delete failed"}`);
+  }
 }
 
 // --- X連携関連 ---
