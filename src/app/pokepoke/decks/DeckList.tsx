@@ -14,6 +14,8 @@ import {
   displayDeckName,
   type OpponentDeckNameMap,
 } from "@/lib/actions/opponent-deck-display";
+import { matchesQuery } from "@/lib/search/normalize";
+import { stripAllWhitespace } from "@/lib/util/whitespace";
 import { Pencil, X, Search } from "lucide-react";
 
 type Tuning = {
@@ -83,10 +85,10 @@ export function DeckList({
   const display = (name: string) => displayDeckName(name, opponentDeckNameMap);
 
   // Filter chips by search query (日本語表示名 / 英語原名どちらでもヒット)
+  // NFKC + lowercase + ひらがな→カタカナ正規化で表記揺れ吸収 (共通 helper)
   const filterByQuery = (items: string[]) => {
     if (!searchQuery) return items;
-    const q = searchQuery.toLowerCase();
-    return items.filter(s => s.toLowerCase().includes(q) || display(s).toLowerCase().includes(q));
+    return items.filter((s) => matchesQuery(searchQuery, [s, display(s)]));
   };
 
   const filteredMajor = filterByQuery(suggestions.major);
@@ -96,18 +98,20 @@ export function DeckList({
 
   // Chip create handler
   const handleChipCreate = async (deckName: string) => {
-    if (registeredNames.has(deckName)) return;
+    // 表示名 (label = display(name)) が渡されるケースを含むため、全空白削除で保存名を統一
+    const cleaned = stripAllWhitespace(deckName);
+    if (!cleaned || registeredNames.has(cleaned)) return;
     setLoading(true);
     setDeckError(null);
     try {
-      const newDeck = await createDeck(deckName, format, "pokepoke");
+      const newDeck = await createDeck(cleaned, format, "pokepoke");
       if (newDeck) {
         setDecks((prev) => [...prev, { ...newDeck, deck_tunings: newDeck.deck_tunings ?? [] }]);
       } else {
         const updated = await getDecks(format, "pokepoke");
         setDecks(updated);
       }
-      showToast(`${deckName}を追加しました`);
+      showToast(`${cleaned}を追加しました`);
     } catch (e) {
       setDeckError(e instanceof Error ? e.message : "エラーが発生しました");
     } finally {
@@ -117,7 +121,8 @@ export function DeckList({
 
   // Free input create handler
   const handleFreeCreate = async () => {
-    const name = freeInput.trim();
+    // 自由入力でも全空白を削除して保存名を統一
+    const name = stripAllWhitespace(freeInput.trim());
     if (!name) return;
     if (registeredNames.has(name)) {
       setDeckError("同名のデッキが既に登録されています");
@@ -143,13 +148,15 @@ export function DeckList({
   };
 
   const handleUpdate = async (id: string) => {
-    if (!editName.trim()) return;
+    // 編集時も全空白削除して保存名を統一
+    const cleaned = stripAllWhitespace(editName.trim());
+    if (!cleaned) return;
     setLoading(true);
     setDeckError(null);
     try {
-      await updateDeck(id, editName.trim());
+      await updateDeck(id, cleaned);
       setDecks(
-        decks.map((d) => (d.id === id ? { ...d, name: editName.trim() } : d))
+        decks.map((d) => (d.id === id ? { ...d, name: cleaned } : d))
       );
       setEditingId(null);
     } catch (e) {
@@ -370,7 +377,7 @@ export function DeckList({
                   {tuningError && isExpanded(deck.id) && (
                     <p className="text-xs text-destructive px-4 pb-2">{tuningError}</p>
                   )}
-                    <div style={{ fontSize: 10, color: "var(--muted-foreground)", padding: "4px 16px 8px 16px" }}>※対戦記録登録時サーバー内で共有されます（他ユーザーには非公開）</div>
+                    <div style={{ fontSize: 10, color: "var(--muted-foreground)", padding: "4px 16px 8px 16px" }}>※チューニング内容は対戦記録時、戦績共有中のDiscordサーバー内で共有されます（他ユーザーには非公開）</div>
                 </div>
               )}
             </div>
@@ -446,7 +453,11 @@ export function DeckList({
               <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
                 {filteredMajor.map((name) => {
                   const label = display(name);
-                  const isRegistered = registeredNames.has(name) || registeredNames.has(label);
+                  // sanitize 後の保存名 (内部空白なし) と chip label (内部空白あり) のミスマッチを拾う
+                  const isRegistered =
+                    registeredNames.has(name) ||
+                    registeredNames.has(label) ||
+                    registeredNames.has(stripAllWhitespace(label));
                   return (
                     <button
                       key={name}
@@ -491,7 +502,11 @@ export function DeckList({
               >
                 {filteredMinor.map((name) => {
                   const label = display(name);
-                  const isRegistered = registeredNames.has(name) || registeredNames.has(label);
+                  // sanitize 後の保存名 (内部空白なし) と chip label (内部空白あり) のミスマッチを拾う
+                  const isRegistered =
+                    registeredNames.has(name) ||
+                    registeredNames.has(label) ||
+                    registeredNames.has(stripAllWhitespace(label));
                   return (
                     <button
                       key={name}
@@ -550,7 +565,11 @@ export function DeckList({
               >
                 {(searchQuery ? filteredOther : suggestions.other).map((name) => {
                   const label = display(name);
-                  const isRegistered = registeredNames.has(name) || registeredNames.has(label);
+                  // sanitize 後の保存名 (内部空白なし) と chip label (内部空白あり) のミスマッチを拾う
+                  const isRegistered =
+                    registeredNames.has(name) ||
+                    registeredNames.has(label) ||
+                    registeredNames.has(stripAllWhitespace(label));
                   return (
                     <button
                       key={name}

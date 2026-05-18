@@ -10,6 +10,8 @@ import {
   updateTuning,
   deleteTuning,
 } from "@/lib/actions/deck-actions";
+import { matchesQuery } from "@/lib/search/normalize";
+import { stripAllWhitespace } from "@/lib/util/whitespace";
 import { Button } from "@/components/ui/Button";
 import { Pencil, X, Search } from "lucide-react";
 
@@ -76,10 +78,10 @@ export function DeckList({
   };
 
   // Filter chips by search query
+  // NFKC + lowercase + ひらがな→カタカナ正規化で表記揺れ吸収 (共通 helper)
   const filterByQuery = (items: string[]) => {
     if (!searchQuery) return items;
-    const q = searchQuery.toLowerCase();
-    return items.filter(s => s.toLowerCase().includes(q));
+    return items.filter((s) => matchesQuery(searchQuery, [s]));
   };
 
   const filteredMajor = filterByQuery(suggestions.major);
@@ -89,18 +91,20 @@ export function DeckList({
 
   // Chip create handler
   const handleChipCreate = async (deckName: string) => {
-    if (registeredNames.has(deckName)) return;
+    // デッキ名から全空白を削除 (内部空白入りの label が来た場合も保存名は揃える)
+    const cleaned = stripAllWhitespace(deckName);
+    if (!cleaned || registeredNames.has(cleaned)) return;
     setLoading(true);
     setDeckError(null);
     try {
-      const newDeck = await createDeck(deckName, format);
+      const newDeck = await createDeck(cleaned, format);
       if (newDeck) {
         setDecks((prev) => [...prev, { ...newDeck, deck_tunings: newDeck.deck_tunings ?? [] }]);
       } else {
         const updated = await getDecks(format);
         setDecks(updated);
       }
-      showToast(`${deckName}を追加しました`);
+      showToast(`${cleaned}を追加しました`);
     } catch (e) {
       setDeckError(e instanceof Error ? e.message : "エラーが発生しました");
     } finally {
@@ -110,7 +114,8 @@ export function DeckList({
 
   // Free input create handler
   const handleFreeCreate = async () => {
-    const name = freeInput.trim();
+    // 自由入力でも全空白を削除して保存名を統一
+    const name = stripAllWhitespace(freeInput.trim());
     if (!name) return;
     if (registeredNames.has(name)) {
       setDeckError("同名のデッキが既に登録されています");
@@ -136,13 +141,15 @@ export function DeckList({
   };
 
   const handleUpdate = async (id: string) => {
-    if (!editName.trim()) return;
+    // 編集時も全空白削除して保存名を統一
+    const cleaned = stripAllWhitespace(editName.trim());
+    if (!cleaned) return;
     setLoading(true);
     setDeckError(null);
     try {
-      await updateDeck(id, editName.trim());
+      await updateDeck(id, cleaned);
       setDecks(
-        decks.map((d) => (d.id === id ? { ...d, name: editName.trim() } : d))
+        decks.map((d) => (d.id === id ? { ...d, name: cleaned } : d))
       );
       setEditingId(null);
     } catch (e) {
@@ -363,7 +370,7 @@ export function DeckList({
                   {tuningError && isExpanded(deck.id) && (
                     <p className="text-xs text-destructive px-4 pb-2">{tuningError}</p>
                   )}
-                    <div style={{ fontSize: 10, color: "var(--muted-foreground)", padding: "4px 16px 8px 16px" }}>※対戦記録登録時サーバー内で共有されます（他ユーザーには非公開）</div>
+                    <div style={{ fontSize: 10, color: "var(--muted-foreground)", padding: "4px 16px 8px 16px" }}>※チューニング内容は対戦記録時、戦績共有中のDiscordサーバー内で共有されます（他ユーザーには非公開）</div>
                 </div>
               )}
             </div>

@@ -8,6 +8,7 @@ import { getDailyBattleCounts, getOpponentDeckSuggestions } from "@/lib/actions/
 import { getTeamMembers, getMyTeamsWithVisibility } from "@/lib/actions/team-actions";
 import type { TeamMember, TeamWithVisibility } from "@/lib/actions/team-actions";
 import { useFormat } from "@/hooks/use-format";
+import { useDateRange } from "@/hooks/use-date-range";
 import { useActiveTeam } from "@/hooks/use-active-team";
 import { FormatSelector } from "@/components/ui/FormatSelector";
 import { ScopeSelector } from "@/components/ui/ScopeSelector";
@@ -55,16 +56,9 @@ function StatsPageInner() {
   const [isGuest, setIsGuest] = useState(false);
   const [battleCounts, setBattleCounts] = useState<Record<string, number>>({});
 
-  const [startDate, setStartDate] = useState(() => {
-    return searchParams.get("start") || (() => {
-      const d = new Date();
-      d.setMonth(d.getMonth() - 1);
-      return d.toLocaleDateString("sv-SE");
-    })();
-  });
-  const [endDate, setEndDate] = useState(() => {
-    return searchParams.get("end") || new Date().toLocaleDateString("sv-SE");
-  });
+  // useDateRange: URL `?start=` > localStorage (ゲーム別) > default (1ヶ月前)。
+  // URL は表示のみ (LS 不変)。LS 更新は DateRangeCalendar 経由の setStartDate のみ。
+  const { startDate, endDate, setStartDate, setEndDate } = useDateRange();
 
   // Data states
   const [personalStats, setPersonalStats] = useState<DetailedPersonalStats>({ myDeckStats: [], opponentDeckStats: [], turnOrder: { firstWins: 0, firstLosses: 0, firstDraws: 0, secondWins: 0, secondLosses: 0, secondDraws: 0, unknownWins: 0, unknownLosses: 0, unknownDraws: 0 } });

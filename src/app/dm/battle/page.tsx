@@ -12,6 +12,7 @@ import {
 } from "@/lib/actions/battle-actions";
 import { checkIsAdmin } from "@/lib/actions/admin-actions";
 import { useFormat } from "@/hooks/use-format";
+import { useDateRange } from "@/hooks/use-date-range";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { BattleTabsView } from "@/components/battle/BattleTabsView";
 
@@ -63,12 +64,9 @@ function BattlePageInner() {
 
   const [error, setError] = useState<string | null>(null);
 
-  const [startDate, setStartDate] = useState(() => {
-    const d = new Date();
-    d.setMonth(d.getMonth() - 1);
-    return d.toLocaleDateString("sv-SE");
-  });
-  const [endDate, setEndDate] = useState(() => new Date().toLocaleDateString("sv-SE"));
+  // useDateRange: URL `?start=` > localStorage (ゲーム別) > default (1ヶ月前)。
+  // battle/page.tsx は従来 URL params 非対応だったが、本改修で stats と同じく URL 連携を追加。
+  const { startDate, endDate, setStartDate, setEndDate } = useDateRange();
 
   const loadInputData = useCallback(() => {
     if (!ready) return;

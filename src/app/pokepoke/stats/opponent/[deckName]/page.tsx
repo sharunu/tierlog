@@ -7,6 +7,7 @@ import type { OpponentDeckDetailStats } from "@/lib/actions/stats-actions";
 import { getDailyBattleCounts } from "@/lib/actions/battle-actions";
 import { getOpponentDeckNameMap, displayDeckName, type OpponentDeckNameMap } from "@/lib/actions/opponent-deck-display";
 import { useFormat } from "@/hooks/use-format";
+import { useDateRange } from "@/hooks/use-date-range";
 import { FormatSelector } from "@/components/ui/FormatSelector";
 import { DateRangeCalendar } from "@/components/battle/DateRangeCalendar";
 import { MatchupCard } from "@/components/stats/MatchupCard";
@@ -42,16 +43,8 @@ export default function OpponentDeckDetailPage() {
   const [sortBy, setSortBy] = useState<"count" | "winRate">("count");
   const [viewMode, setViewMode] = useState<"visual" | "table">("visual");
 
-  const [startDate, setStartDate] = useState(() => {
-    return searchParams.get("start") || (() => {
-      const d = new Date();
-      d.setMonth(d.getMonth() - 1);
-      return d.toLocaleDateString("sv-SE");
-    })();
-  });
-  const [endDate, setEndDate] = useState(() => {
-    return searchParams.get("end") || new Date().toLocaleDateString("sv-SE");
-  });
+  // useDateRange: URL `?start=` > localStorage (ゲーム別) > default (1ヶ月前)。
+  const { startDate, endDate, setStartDate, setEndDate } = useDateRange();
 
   const loadStats = useCallback(() => {
     if (!ready) return;

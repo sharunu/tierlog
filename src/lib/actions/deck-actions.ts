@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { DEFAULT_GAME, type GameSlug } from "@/lib/games";
+import { stripAllWhitespace } from "@/lib/util/whitespace";
 
 export async function getDecks(format: string, game: GameSlug = DEFAULT_GAME) {
   const supabase = createClient();
@@ -25,6 +26,13 @@ export async function getDecks(format: string, game: GameSlug = DEFAULT_GAME) {
 }
 
 export async function createDeck(name: string, format: string, game: GameSlug = DEFAULT_GAME) {
+  // デッキ名から全空白 (半角/全角/タブ/改行/zero-width) を削除。
+  // UI 側でも事前 sanitize するが、API 直叩き対策として server actions 側でも防御する。
+  const cleaned = stripAllWhitespace(name.trim());
+  if (cleaned.length === 0) {
+    throw new Error("デッキ名を入力してください");
+  }
+
   const supabase = createClient();
   const {
     data: { user },
@@ -36,7 +44,7 @@ export async function createDeck(name: string, format: string, game: GameSlug = 
     .select("id")
     .eq("user_id", user.id)
     .eq("game_title", game)
-    .eq("name", name)
+    .eq("name", cleaned)
     .eq("format", format)
     .eq("is_archived", false)
     .limit(1);
@@ -47,7 +55,7 @@ export async function createDeck(name: string, format: string, game: GameSlug = 
 
   const { data, error } = await supabase
     .from("decks")
-    .insert({ user_id: user.id, name, format, game_title: game })
+    .insert({ user_id: user.id, name: cleaned, format, game_title: game })
     .select("*, deck_tunings(id, name, sort_order)")
     .single();
 
@@ -56,6 +64,12 @@ export async function createDeck(name: string, format: string, game: GameSlug = 
 }
 
 export async function updateDeck(id: string, name: string) {
+  // デッキ名から全空白を削除 (server actions 側の最終防衛)
+  const cleaned = stripAllWhitespace(name.trim());
+  if (cleaned.length === 0) {
+    throw new Error("デッキ名を入力してください");
+  }
+
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
@@ -68,7 +82,7 @@ export async function updateDeck(id: string, name: string) {
     .select("id")
     .eq("user_id", user.id)
     .eq("game_title", deck.game_title)
-    .eq("name", name)
+    .eq("name", cleaned)
     .eq("format", deck.format)
     .eq("is_archived", false)
     .neq("id", id)
@@ -78,7 +92,7 @@ export async function updateDeck(id: string, name: string) {
     throw new Error("同じ名前のデッキが既に登録されています");
   }
 
-  const { error } = await supabase.from("decks").update({ name }).eq("id", id).eq("user_id", user.id);
+  const { error } = await supabase.from("decks").update({ name: cleaned }).eq("id", id).eq("user_id", user.id);
   if (error) throw new Error(error.message);
 }
 

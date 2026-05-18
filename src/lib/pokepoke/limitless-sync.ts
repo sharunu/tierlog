@@ -17,6 +17,7 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 import { getServerEnv } from "@/lib/cf-env";
+import { stripAllWhitespace } from "@/lib/util/whitespace";
 import { parseDeckTable, LimitlessRow } from "./limitless-parser";
 import { translateDeckName } from "./deck-translator";
 
@@ -85,18 +86,23 @@ export async function runLimitlessSync(
     return { ok: false, error: "no deck rows" };
   }
 
-  const translated = rows.map((r) => ({
-    name_en: r.name_en,
-    name_ja: translateDeckName(r.name_en),
-    share: r.share,
-    count: r.count,
-    wins: r.wins,
-    losses: r.losses,
-    ties: r.ties,
-    win_pct: r.win_pct,
-    icon_urls: r.icon_urls,
-    slug: r.slug,
-  }));
+  const translated = rows.map((r) => {
+    const nameJa = translateDeckName(r.name_en);
+    // name_ja は表示名のため全空白削除する。name_en は Limitless 内部キーなので触らない。
+    const cleanedNameJa = nameJa ? stripAllWhitespace(nameJa) : null;
+    return {
+      name_en: r.name_en,
+      name_ja: cleanedNameJa,
+      share: r.share,
+      count: r.count,
+      wins: r.wins,
+      losses: r.losses,
+      ties: r.ties,
+      win_pct: r.win_pct,
+      icon_urls: r.icon_urls,
+      slug: r.slug,
+    };
+  });
 
   const synced_at = new Date().toISOString();
   for (const format of TARGET_FORMATS) {

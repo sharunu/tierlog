@@ -7,6 +7,7 @@ import type { DeckDetailStats } from "@/lib/actions/stats-actions";
 import { getDailyBattleCounts, getOpponentDeckSuggestions } from "@/lib/actions/battle-actions";
 import { getOpponentDeckNameMap, displayDeckName, type OpponentDeckNameMap } from "@/lib/actions/opponent-deck-display";
 import { useFormat } from "@/hooks/use-format";
+import { useDateRange } from "@/hooks/use-date-range";
 import { FormatSelector } from "@/components/ui/FormatSelector";
 import { DateRangeCalendar } from "@/components/battle/DateRangeCalendar";
 import { TuningStatsSection } from "@/components/stats/TuningStatsSection";
@@ -51,16 +52,8 @@ export default function DeckDetailPage() {
   const [nameMapFormat, setNameMapFormat] = useState<string | null>(null);
   const nameMapReady = nameMapFormat === format;
 
-  const [startDate, setStartDate] = useState(() => {
-    return searchParams.get("start") || (() => {
-      const d = new Date();
-      d.setMonth(d.getMonth() - 1);
-      return d.toLocaleDateString("sv-SE");
-    })();
-  });
-  const [endDate, setEndDate] = useState(() => {
-    return searchParams.get("end") || new Date().toLocaleDateString("sv-SE");
-  });
+  // useDateRange: URL `?start=` > localStorage (ゲーム別) > default (1ヶ月前)。
+  const { startDate, endDate, setStartDate, setEndDate } = useDateRange();
 
   // Fetch deck categories for donut chart aggregation
   useEffect(() => {

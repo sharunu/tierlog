@@ -7,6 +7,7 @@ import {
   displayDeckName,
   type OpponentDeckNameMap,
 } from "@/lib/actions/opponent-deck-display";
+import { matchesQuery } from "@/lib/search/normalize";
 
 type Props = {
   majorSuggestions: string[];
@@ -41,17 +42,9 @@ export function OpponentDeckSelector({
 
   const display = (name: string) => displayDeckName(name, nameMap);
 
-  const normalizeQuery = (s: string): string =>
-    s.normalize("NFKC")
-      .toLowerCase()
-      .replace(/[ぁ-ゖ]/g, (ch) => String.fromCharCode(ch.charCodeAt(0) + 0x60));
-
   const filterByQuery = (items: string[]) => {
     if (!searchText) return items;
-    const q = normalizeQuery(searchText);
-    return items.filter((s) => {
-      return normalizeQuery(s).includes(q) || normalizeQuery(display(s)).includes(q);
-    });
+    return items.filter((s) => matchesQuery(searchText, [s, display(s)]));
   };
 
   const filteredMajor = filterByQuery(majorSuggestions);
