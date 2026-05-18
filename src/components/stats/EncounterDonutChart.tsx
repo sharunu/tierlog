@@ -1,6 +1,6 @@
 "use client";
 
-import { PieChart, Pie, Cell, ResponsiveContainer, Sector } from "recharts";
+import { PieChart, Pie, Cell, ResponsiveContainer, Sector, type PieSectorShapeProps } from "recharts";
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { getWinRateColor } from "@/lib/stats-utils";
 import { assignChartColors, CHART_OTHER_COLOR } from "@/lib/chart-colors";
@@ -212,7 +212,7 @@ export function EncounterDonutChart({ items, otherBreakdown, overallWinRate, ove
     return { x, y, midAngle };
   }, [activeIndex, chartCenter, data, outerRadius]);
 
-  const renderSectorShape = useCallback((props: any) => {
+  const renderSectorShape = useCallback((props: PieSectorShapeProps) => {
     const { cx, cy, innerRadius, outerRadius, startAngle, endAngle, fill, index } = props;
     const isActive = index === activeIndex;
     return (
