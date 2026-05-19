@@ -55,6 +55,9 @@ cloudflare-env.d.ts
 !.claude/agents/
 !.claude/commands/
 
+# Codex 設定: ローカル状態のみ、追跡しない
+.codex/
+
 # local temporary files
 .tmp/
 

@@ -1,11 +1,11 @@
 ---
-description: plan ファイルを plan-critic に検証させ、機械的指摘は自動修正、判断要は AskUserQuestion で escalate しながら GO 到達まで最大 3 反復するオーケストレーター。Plan Mode 中は実行非推奨（plan ファイルへの Edit が必要）。メインセッションから実行すること（subagent 内では Agent spawn 不可）。
+description: plan ファイルを plan-critic に検証させ、機械的指摘は自動修正、判断要は AskUserQuestion で escalate しながら GO 到達まで最大 5 反復するオーケストレーター。Plan Mode 中は実行非推奨（plan ファイルへの Edit が必要）。メインセッションから実行すること（subagent 内では Agent spawn 不可）。
 argument-hint: <plan ファイルパス>
 allowed-tools: Bash(git fetch *), Bash(git status *), Bash(git rev-parse *), Bash(shasum *), Read, Edit, Agent(plan-critic), AskUserQuestion
 model: opus
 ---
 
-あなたは review-plan-loop オーケストレーターです。与えられた plan ファイルを `plan-critic` subagent に検証させ、機械的指摘は自動修正、判断要は `AskUserQuestion` で escalate しながら、GO 到達まで最大 3 反復します。
+あなたは review-plan-loop オーケストレーターです。与えられた plan ファイルを `plan-critic` subagent に検証させ、機械的指摘は自動修正、判断要は `AskUserQuestion` で escalate しながら、GO 到達まで最大 5 反復します。
 
 ## 引数
 
@@ -33,9 +33,9 @@ model: opus
    - `resolved_decisions = (空配列)`
    - `error_buffer = (空配列)` — 最終レポート用に「Edit 適用不可」「critic 不正出力」等を蓄積
 
-## メインループ（最大 3 反復）
+## メインループ（最大 5 反復）
 
-各反復 i ∈ {1, 2, 3} で以下を実行:
+各反復 i ∈ {1, 2, 3, 4, 5} で以下を実行:
 
 ### Step 1: critic spawn
 
@@ -85,7 +85,7 @@ CLAUDE_PLAN_ID
 
 - `same_as_prev = current_issue_ids ∩ prev_issue_ids`
 - 空でない → `error_buffer` に「<ID 一覧> が前反復から残った可能性」と記録するが**ループは継続**
-- 真の停止条件は「3 反復到達」と「verdict == GO」のみ（LLM 出力揺れで ID は完全に安定しないため、停止判定には使わず情報提示のみ）
+- 真の停止条件は「5 反復到達」と「verdict == GO」のみ（LLM 出力揺れで ID は完全に安定しないため、停止判定には使わず情報提示のみ）
 
 ### Step 6: 機械的指摘 (`kind == "mechanical"`) を自動修正
 
@@ -118,7 +118,7 @@ CLAUDE_PLAN_ID
 ## 終了条件
 
 - `verdict == "GO"`: 「✅ 実装フェーズへの承認待ち」をユーザーに通知（実装は実行しない）
-- 3 反復到達: 「⚠️ ループ上限到達」として現状の判定 + `error_buffer` を提示
+- 5 反復到達: 「⚠️ ループ上限到達」として現状の判定 + `error_buffer` を提示
 - パース失敗 2 回 / Agent 失敗 3 回: abort
 - AskUserQuestion で「Other」選択: ループ終了 + 手動編集を案内
 - mechanical の Edit 適用不可がバッファに蓄積: 終了時に一覧でユーザー報告（手動修正依頼）
