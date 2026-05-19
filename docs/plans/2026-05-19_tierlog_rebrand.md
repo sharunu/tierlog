@@ -351,12 +351,12 @@ dev で確認した項目を **production 環境** (本番 Supabase / Discord pr
 
 ## 10. 完了条件
 
-- [ ] 5.A の全コード変更が dev ブランチに反映され、`npm run lint` / `opennextjs-cloudflare build` がパス
-- [ ] dev preview (`https://dev-duepure-tracker.jianrenzhongtian7.workers.dev`) で 5.D.A の全項目 OK
-- [ ] 5.B.1〜5.B.8 の全外部設定がユーザーにより実施完了 (5.B.8 の `PRODUCTION_API_URL` secret 登録含む)
-- [ ] main マージ後の本番ビルドが成功し、`https://tierlog.app` で 5.D.B の全項目 OK
-- [ ] GitHub Actions の LimitlessTCG Deck Sync job を `workflow_dispatch` で発火し、`PRODUCTION_API_URL` 経由で本番 API に到達できることを確認 (本番反映後)
-- [ ] Cloudflare Web Analytics で tierlog.app トラフィック計測確認
+- [x] 5.A の全コード変更が dev ブランチに反映され、`npm run lint` (リネームによる新規エラー 0、既存 lint 残債 58 件は Plan 範囲外) パス。`opennextjs-cloudflare build` は Cloudflare 側の自動ビルドで成功確認済
+- [x] dev preview (`https://dev-duepure-tracker.jianrenzhongtian7.workers.dev`) で 5.D.A の全項目 OK (ユーザー実機検証 OK)
+- [x] 5.B.1〜5.B.8 の全外部設定がユーザーにより実施完了 (5.B.8 の `PRODUCTION_API_URL` secret 登録含む)
+- [x] main マージ (commit `4f42354`、`0614e7f → 4f42354`) 後の本番ビルドが成功し、`https://tierlog.app` で 5.D.B の全項目 OK (Claude 自前 curl 検証 + ユーザー実機検証 OK)
+- [ ] GitHub Actions の LimitlessTCG Deck Sync job を `workflow_dispatch` で発火し、`PRODUCTION_API_URL` 経由で本番 API に到達できることを確認 → **後日対応** (フェーズ 8 / 系統 D に位置付け。`LIMITLESS_HTML_SYNC_PAUSED=true` のため skipped レスポンス確認で十分、cron 影響なし)
+- [ ] Cloudflare Web Analytics で tierlog.app トラフィック計測確認 → **後日対応** (本番反映から 24h 経過後にダッシュボードで確認)
 
 ## 11. 参照
 
@@ -386,4 +386,10 @@ dev で確認した項目を **production 環境** (本番 Supabase / Discord pr
 
 ---
 
-**ステータス**: Draft → `/review-plan-loop docs/plans/2026-05-19_tierlog_rebrand.md` で plan-critic レビューへ
+**ステータス**: ✅ **Completed (フェーズ 1-7)** (2026-05-19) — 本番反映 commit `4f42354`、本番 URL `https://tierlog.app` 稼働中。完了報告 `docs/reports/2026-05-19_tierlog_rebrand.md`。
+
+**後日対応 (フェーズ 8 = 系統 D)** — memory `project_remaining_tasks_after_2026_05_09` に登録:
+1. 旧 workers.dev redirect 削除 (Supabase prod Auth / Discord prod App)
+2. www.tierlog.app の Custom Domain 追加 + naked への 301 redirect
+3. GitHub Actions LimitlessTCG Deck Sync の `workflow_dispatch` verify
+4. Cloudflare Web Analytics で tierlog.app トラフィック計測確認 (24h 後)
