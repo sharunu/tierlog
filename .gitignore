@@ -57,3 +57,10 @@ cloudflare-env.d.ts
 
 # local temporary files
 .tmp/
+
+# Supabase backup / dump files (絶対に git に含めない、本番 DB の機密データを含む可能性)
+# 取得例: supabase db dump --db-url "$PROD_DB_URL" -f backup-prod-YYYYMMDD.sql
+# pg_dump / supabase db dump 経由のファイルは安全な暗号化領域に保管し、git には push しない
+backup-*.sql
+dump-*.sql
+*-backup.sql
