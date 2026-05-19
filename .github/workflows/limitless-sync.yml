@@ -13,11 +13,15 @@ jobs:
       - name: Trigger limitless-sync API
         run: |
           set -e
+          if [ -z "${{ secrets.PRODUCTION_API_URL }}" ]; then
+            echo "PRODUCTION_API_URL secret is not set"
+            exit 1
+          fi
           HTTP_CODE=$(curl -s -o /tmp/response.json -w "%{http_code}" \
             -X POST \
             -H "X-Internal-Key: ${{ secrets.INTERNAL_API_KEY }}" \
             -H "Content-Type: application/json" \
-            "https://duepure-tracker.jianrenzhongtian7.workers.dev/api/internal/limitless-sync")
+            "${{ secrets.PRODUCTION_API_URL }}/api/internal/limitless-sync")
           echo "HTTP $HTTP_CODE"
           cat /tmp/response.json
           if [ "$HTTP_CODE" -ne 200 ]; then

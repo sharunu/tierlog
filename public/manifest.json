@@ -1,6 +1,6 @@
 {
-  "name": "ゲーム戦績トラッカー",
-  "short_name": "GameTracker",
+  "name": "Tierlog",
+  "short_name": "Tierlog",
   "description": "各ゲームの対戦記録・環境分析ツール",
   "start_url": "/",
   "display": "standalone",

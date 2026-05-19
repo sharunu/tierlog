@@ -90,7 +90,7 @@ export function ShareModal({ type, data, onClose }: Props) {
 
   const handleMobileShare = async () => {
     if (!imageBlob) return;
-    const file = new File([imageBlob], "duepure-stats.png", { type: "image/png" });
+    const file = new File([imageBlob], "tierlog-stats.png", { type: "image/png" });
     if (navigator.canShare?.({ files: [file] })) {
       try {
         await navigator.share({ text: shareText, files: [file] });
@@ -104,7 +104,7 @@ export function ShareModal({ type, data, onClose }: Props) {
     if (!imageUrl) return;
     const a = document.createElement("a");
     a.href = imageUrl;
-    a.download = "duepure-stats.png";
+    a.download = "tierlog-stats.png";
     a.click();
   };
 

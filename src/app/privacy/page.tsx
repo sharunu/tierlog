@@ -18,7 +18,7 @@ export default function PrivacyPage() {
       </div>
 
       <div className="bg-surface-2 rounded-[10px] px-4 py-5 space-y-5 text-[13px] text-foreground leading-relaxed">
-        <p className="text-[11px] text-muted-foreground">最終更新日: 2026年4月18日</p>
+        <p className="text-[11px] text-muted-foreground">最終更新日: 2026年5月19日</p>
 
         <section>
           <h2 className="text-[14px] font-medium text-foreground mb-2">1. 収集する情報</h2>

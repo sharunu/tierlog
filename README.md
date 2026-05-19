@@ -1,38 +1,31 @@
-# duepure-tracker
+# Tierlog
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Tierlog (ティアログ) は、対応するデジタルカードゲームの対戦記録と環境分析をブラウザ上で扱う Web アプリです。本リポジトリは Tierlog のフロントエンド + Cloudflare Workers ランタイムを含みます。
 
-## Getting Started
+- 本番: <https://tierlog.app>
+- 技術スタック: Next.js (App Router) / React / Supabase / Cloudflare Workers (OpenNext) / TypeScript
 
-First, run the development server:
+開発フロー、ブランチ運用、デプロイ手順、運用ルールは `AGENTS.md` / `CLAUDE.md` (ローカル運用ドキュメント) を参照してください。デザイン基準は `DESIGN.md` を参照してください。
+
+## ローカル開発
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`http://localhost:3000` でアプリが起動します。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+`.env.local` に Supabase の URL / anon key 等の環境変数を設定してください (詳細は `CLAUDE.md` 参照)。
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## ビルド・デプロイ
 
-## Learn More
+本番は Cloudflare Workers の自動ビルド (OpenNext for Cloudflare) で運用しています。`main` への push が本番反映、`dev` への push が preview デプロイです。詳細は `CLAUDE.md` を参照。
 
-To learn more about Next.js, take a look at the following resources:
+## ドキュメント
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `AGENTS.md` / `CLAUDE.md` — 開発・運用ルール (ローカル)
+- `DESIGN.md` — UI / ビジュアルデザイン基準
+- `docs/app-structure-overview.html` — アプリ構造の概観
+- `docs/runbooks/` — 運用ランブック
+- `docs/plans/` — 設計プラン履歴

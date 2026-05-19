@@ -8,7 +8,7 @@ import { BanGuard } from "@/components/providers/BanGuard";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import "./globals.css";
 
-const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem('duepure-theme');var r;if(t==='light'||t==='dark'){r=t;}else if(t==='system'){r=window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';}else{r='dark';}document.documentElement.setAttribute('data-theme',r);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();`;
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem('tierlog-theme');var r;if(t==='light'||t==='dark'){r=t;}else if(t==='system'){r=window.matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';}else{r='dark';}document.documentElement.setAttribute('data-theme',r);}catch(e){document.documentElement.setAttribute('data-theme','dark');}})();`;
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -20,7 +20,7 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const SITE_NAME = "ゲーム戦績トラッカー";
+const SITE_NAME = "Tierlog";
 const SITE_DESCRIPTION = "各ゲームの対戦記録・環境分析ツール";
 
 export const metadata: Metadata = {

@@ -22,7 +22,7 @@ import { translateDeckName } from "./deck-translator";
 
 const LIMITLESS_URL =
   "https://play.limitlesstcg.com/decks?game=POCKET&format=standard";
-const USER_AGENT = "duepure-tracker/0.1 (+https://github.com/sharunu/duepure-tracker)";
+const USER_AGENT = "tierlog/0.1 (+https://github.com/sharunu/duepure-tracker)";
 const GAME_TITLE = "pokepoke";
 const TARGET_FORMATS = ["RANKED", "RANDOM"] as const;
 const RECENT_SYNC_GUARD_SECONDS = 60;

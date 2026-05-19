@@ -111,7 +111,7 @@ function createSupabase(name, url, key) {
     },
     global: {
       headers: {
-        "X-Client-Info": `duepure-staging-sync/${name}`,
+        "X-Client-Info": `tierlog-staging-sync/${name}`,
       },
     },
   });

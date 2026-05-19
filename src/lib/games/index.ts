@@ -14,7 +14,7 @@ export type GameMeta = {
   slug: GameSlug;
   displayName: string;  // 公式表記
   shortName: string;    // 短縮
-  trackerName: string;  // 「デュエプレトラッカー」など
+  trackerName: string;  // 「Tierlog - デュエプレ」など
   description: string;
   formats: readonly FormatOption[]; // 空配列なら FormatSelector 非表示
   defaultFormat: string | null;
@@ -25,7 +25,7 @@ export const GAMES: Record<GameSlug, GameMeta> = {
     slug: "dm",
     displayName: "デュエル・マスターズ プレイス",
     shortName: "デュエプレ",
-    trackerName: "デュエプレトラッカー",
+    trackerName: "Tierlog - デュエプレ",
     description: "デュエル・マスターズ プレイスの対戦記録・環境分析ツール",
     formats: [
       { code: "ND", label: "ND" },
@@ -37,7 +37,7 @@ export const GAMES: Record<GameSlug, GameMeta> = {
     slug: "pokepoke",
     displayName: "Pokémon Trading Card Game Pocket",
     shortName: "ポケポケ",
-    trackerName: "ポケポケトラッカー",
+    trackerName: "Tierlog - ポケポケ",
     description: "Pokémon Trading Card Game Pocket の対戦記録・環境分析ツール",
     formats: [
       { code: "RANKED", label: "ランクマッチ" },
@@ -51,7 +51,7 @@ export const GAME_SLUGS = Object.keys(GAMES) as GameSlug[];
 export const DEFAULT_GAME: GameSlug = "dm";
 
 export const APP_BRAND = {
-  name: "ゲーム戦績トラッカー",
+  name: "Tierlog",
   description: "各ゲームの対戦記録・環境分析ツール",
 };
 

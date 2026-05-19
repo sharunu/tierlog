@@ -1,0 +1,953 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tierlog アプリ構造ガイド（初心者向け）</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --bg-soft: #1e293b;
+    --bg-card: #1a2535;
+    --border: #334155;
+    --text: #e2e8f0;
+    --text-dim: #94a3b8;
+    --accent: #38bdf8;
+    --accent-2: #a78bfa;
+    --green: #4ade80;
+    --orange: #fb923c;
+    --pink: #f472b6;
+    --yellow: #fbbf24;
+    --code-bg: #0b1220;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", sans-serif;
+    line-height: 1.75;
+  }
+  .container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 32px 24px 80px;
+  }
+  header.hero {
+    background: linear-gradient(135deg, #1e3a8a 0%, #4c1d95 100%);
+    border-radius: 12px;
+    padding: 32px;
+    margin-bottom: 32px;
+    border: 1px solid var(--border);
+  }
+  header.hero h1 {
+    margin: 0 0 8px;
+    font-size: 28px;
+    letter-spacing: 0.02em;
+  }
+  header.hero .lead {
+    margin: 0;
+    color: #cbd5e1;
+    font-size: 15px;
+  }
+  header.hero .meta {
+    margin-top: 16px;
+    font-size: 12px;
+    color: #94a3b8;
+  }
+  nav.toc {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 24px;
+    margin-bottom: 32px;
+  }
+  nav.toc h2 {
+    margin: 0 0 8px;
+    font-size: 14px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+  }
+  nav.toc ol {
+    margin: 0;
+    padding-left: 24px;
+    columns: 2;
+    column-gap: 32px;
+  }
+  nav.toc li { margin: 4px 0; break-inside: avoid; }
+  nav.toc a {
+    color: var(--accent);
+    text-decoration: none;
+    font-size: 14px;
+  }
+  nav.toc a:hover { text-decoration: underline; }
+  section {
+    margin: 40px 0;
+    scroll-margin-top: 16px;
+  }
+  section h2 {
+    font-size: 22px;
+    border-left: 4px solid var(--accent);
+    padding-left: 12px;
+    margin: 0 0 20px;
+  }
+  section h3 {
+    font-size: 17px;
+    color: var(--accent-2);
+    margin: 24px 0 12px;
+  }
+  p { margin: 12px 0; }
+  .card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    margin: 16px 0;
+  }
+  .callout {
+    background: rgba(56, 189, 248, 0.08);
+    border-left: 4px solid var(--accent);
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  .callout.warn {
+    background: rgba(251, 146, 60, 0.08);
+    border-left-color: var(--orange);
+  }
+  .callout strong { color: var(--accent); }
+  .callout.warn strong { color: var(--orange); }
+  code, .code {
+    font-family: "Menlo", "Monaco", "Consolas", monospace;
+    background: var(--code-bg);
+    color: #fde68a;
+    padding: 2px 6px;
+    border-radius: 4px;
+    font-size: 13px;
+  }
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px;
+    overflow-x: auto;
+    font-size: 13px;
+    line-height: 1.55;
+  }
+  pre code {
+    background: transparent;
+    padding: 0;
+    color: #d1d5db;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 16px 0;
+    font-size: 14px;
+  }
+  th, td {
+    text-align: left;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+  }
+  th {
+    background: var(--bg-soft);
+    color: var(--accent);
+    font-weight: 600;
+    font-size: 13px;
+  }
+  tr:hover td { background: rgba(56, 189, 248, 0.03); }
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-right: 4px;
+  }
+  .b-front { background: rgba(74, 222, 128, 0.18); color: var(--green); }
+  .b-back  { background: rgba(167, 139, 250, 0.18); color: var(--accent-2); }
+  .b-db    { background: rgba(244, 114, 182, 0.18); color: var(--pink); }
+  .b-infra { background: rgba(251, 146, 60, 0.18); color: var(--orange); }
+  .b-auth  { background: rgba(251, 191, 36, 0.18); color: var(--yellow); }
+
+  /* アーキテクチャ図 */
+  .arch {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .arch-layer {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    position: relative;
+  }
+  .arch-layer h4 {
+    margin: 0 0 8px;
+    font-size: 14px;
+    color: var(--accent);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .arch-layer .role {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin: 0 0 12px;
+  }
+  .arch-blocks {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .arch-block {
+    background: var(--bg-soft);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 13px;
+    flex: 1 1 200px;
+  }
+  .arch-block .name { font-weight: 600; color: var(--text); }
+  .arch-block .desc { color: var(--text-dim); font-size: 12px; }
+  .arrow {
+    text-align: center;
+    color: var(--text-dim);
+    font-size: 18px;
+    margin: -4px 0;
+  }
+
+  /* ディレクトリツリー */
+  .tree {
+    font-family: "Menlo", monospace;
+    font-size: 13px;
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 16px 20px;
+    line-height: 1.7;
+    overflow-x: auto;
+  }
+  .tree .dir { color: var(--accent); }
+  .tree .file { color: #d1d5db; }
+  .tree .note { color: var(--text-dim); font-style: italic; }
+
+  /* フロー図 */
+  .flow {
+    display: flex;
+    align-items: stretch;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin: 16px 0;
+  }
+  .flow-step {
+    flex: 1 1 180px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    position: relative;
+  }
+  .flow-step .num {
+    display: inline-block;
+    background: var(--accent);
+    color: #0f172a;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    text-align: center;
+    line-height: 22px;
+    font-size: 12px;
+    font-weight: 700;
+    margin-right: 6px;
+  }
+  .flow-step .title { font-weight: 600; font-size: 14px; }
+  .flow-step .desc { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+
+  ul.compact { margin: 8px 0; padding-left: 22px; }
+  ul.compact li { margin: 4px 0; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 32px 0; }
+  footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    color: var(--text-dim);
+    font-size: 12px;
+    text-align: center;
+  }
+
+  @media (max-width: 720px) {
+    nav.toc ol { columns: 1; }
+    .container { padding: 16px 12px 64px; }
+    header.hero { padding: 20px; }
+    header.hero h1 { font-size: 22px; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+<header class="hero">
+  <h1>Tierlog — アプリ構造ガイド</h1>
+  <p class="lead">一般公開前にアプリの全体像を把握するためのドキュメントです。プログラミング初心者でも読める粒度で、「何が」「どこに」「どう繋がっているか」を順に解説します。</p>
+  <div class="meta">対象リポジトリ: <code>duepure-tracker</code> ／ 作成日: 2026-05-11</div>
+</header>
+
+<nav class="toc">
+  <h2>目次</h2>
+  <ol>
+    <li><a href="#what">1. このアプリは何？</a></li>
+    <li><a href="#arch">2. 全体アーキテクチャ</a></li>
+    <li><a href="#stack">3. 技術スタック</a></li>
+    <li><a href="#envs">4. 3つのデプロイ環境</a></li>
+    <li><a href="#dirs">5. リポジトリの構造</a></li>
+    <li><a href="#pages">6. ページとURLの構成</a></li>
+    <li><a href="#flow">7. データの流れ</a></li>
+    <li><a href="#db">8. データベース構造</a></li>
+    <li><a href="#auth">9. ログインの仕組み</a></li>
+    <li><a href="#multigame">10. マルチゲーム対応</a></li>
+    <li><a href="#deploy">11. 開発・デプロイの流れ</a></li>
+    <li><a href="#features">12. 主要機能の一覧</a></li>
+    <li><a href="#glossary">13. 用語ミニ辞典</a></li>
+  </ol>
+</nav>
+
+<!-- ====================================================== -->
+<section id="what">
+<h2>1. このアプリは何？</h2>
+<p>
+  <strong>Tierlog</strong>は、デジタルカードゲームの<strong>対戦記録</strong>を保存し、勝率やデッキの相性、環境（よく当たる相手デッキ）を可視化する Web アプリです。元々はデュエル・マスターズ プレイス（dm）専用でしたが、現在は<strong>マルチゲーム対応</strong>で、<strong>ポケポケ（pokepoke）</strong>も同じアプリ内で扱えるようになっています。
+</p>
+<div class="card">
+  <strong>ユーザーができる主なこと</strong>
+  <ul class="compact">
+    <li>対戦結果を 1 タップで記録（自分のデッキ／相手のデッキ／勝敗／メモ）</li>
+    <li>勝率・対面相性・環境分布をグラフで確認</li>
+    <li>Discord 連携で「チーム」を作り、メンバー同士で戦績を共有</li>
+    <li>戦績ページを画像化してSNSにシェア（OGP動的生成）</li>
+    <li>運営による不正検知・品質スコアリングで荒らしデータを除外</li>
+  </ul>
+</div>
+</section>
+
+<!-- ====================================================== -->
+<section id="arch">
+<h2>2. 全体アーキテクチャ</h2>
+<p>このアプリは「<strong>ブラウザ ←→ Cloudflare Workers ←→ Supabase</strong>」という3層構造です。サーバーサイドの処理はほぼ無く、ブラウザから直接 Supabase に話しかけるシンプルな構成です。</p>
+
+<div class="arch">
+  <div class="arch-layer">
+    <h4>① ユーザーの端末（ブラウザ / PWA）</h4>
+    <p class="role">React で書かれた画面が動く場所。ユーザーの操作を受け取り、データを Supabase に問い合わせる。</p>
+    <div class="arch-blocks">
+      <div class="arch-block"><div class="name">Next.js (App Router)</div><div class="desc">画面の組み立てとルーティング</div></div>
+      <div class="arch-block"><div class="name">React 19</div><div class="desc">UI部品の表示・更新</div></div>
+      <div class="arch-block"><div class="name">supabase-js</div><div class="desc">DB通信ライブラリ</div></div>
+      <div class="arch-block"><div class="name">PWA Service Worker</div><div class="desc">アプリのようにインストール可能</div></div>
+    </div>
+  </div>
+  <div class="arrow">▼ HTTPS</div>
+  <div class="arch-layer">
+    <h4>② Cloudflare Workers（配信レイヤー）</h4>
+    <p class="role">アプリの HTML/JS/CSS を世界中の CDN から高速配信。一部のサーバー処理（OGP画像生成、Discord OAuth、内部APIなど）もここで動く。</p>
+    <div class="arch-blocks">
+      <div class="arch-block"><div class="name">OpenNext for Cloudflare</div><div class="desc">Next.js を Workers で動かすアダプタ</div></div>
+      <div class="arch-block"><div class="name">Workers Rate Limiting</div><div class="desc">DoS対策（POST制限）</div></div>
+      <div class="arch-block"><div class="name">Web Analytics</div><div class="desc">アクセス計測</div></div>
+    </div>
+  </div>
+  <div class="arrow">▼ Supabase JS Client (HTTPS)</div>
+  <div class="arch-layer">
+    <h4>③ Supabase（バックエンド一式）</h4>
+    <p class="role">DB・認証・ストレージをまとめて提供するサービス。アプリのデータはほぼ全てここに保存される。</p>
+    <div class="arch-blocks">
+      <div class="arch-block"><div class="name">PostgreSQL DB</div><div class="desc">対戦・デッキ・チーム等のデータ本体</div></div>
+      <div class="arch-block"><div class="name">Supabase Auth</div><div class="desc">X / Google / メールログイン</div></div>
+      <div class="arch-block"><div class="name">Row Level Security</div><div class="desc">行単位の権限制御（重要！）</div></div>
+      <div class="arch-block"><div class="name">Storage</div><div class="desc">共有用の画像保存</div></div>
+    </div>
+  </div>
+</div>
+
+<div class="callout">
+  <strong>ポイント</strong> ─ サーバー側で動くコードは最小限。<strong>ブラウザから直接 Supabase を叩く設計</strong>で、その代わり<strong>Row Level Security（RLS）</strong>という DB レベルの権限制御で安全性を担保しています。
+</div>
+</section>
+
+<!-- ====================================================== -->
+<section id="stack">
+<h2>3. 技術スタック</h2>
+<p>このアプリで使われている技術を、役割ごとに分類しました。</p>
+
+<table>
+<thead><tr><th>カテゴリ</th><th>技術</th><th>役割（やさしく）</th></tr></thead>
+<tbody>
+<tr><td><span class="badge b-front">画面</span></td><td>Next.js 16.2 (App Router)</td><td>ページの組み立てとルーティング（URLとファイルが対応）</td></tr>
+<tr><td><span class="badge b-front">画面</span></td><td>React 19.2</td><td>UI部品（ボタン・リスト等）を組み立てるライブラリ</td></tr>
+<tr><td><span class="badge b-front">画面</span></td><td>TypeScript</td><td>JavaScript に型をつけてバグを減らす</td></tr>
+<tr><td><span class="badge b-front">画面</span></td><td>Tailwind CSS v4</td><td>クラス名でデザインを当てる CSS フレームワーク</td></tr>
+<tr><td><span class="badge b-front">画面</span></td><td>recharts</td><td>勝率の折れ線グラフ・円グラフを描画</td></tr>
+<tr><td><span class="badge b-front">画面</span></td><td>@dnd-kit</td><td>デッキ並び替えのドラッグ＆ドロップ</td></tr>
+<tr><td><span class="badge b-front">画面</span></td><td>html2canvas</td><td>戦績ページをスクショ画像化（SNSシェア用）</td></tr>
+<tr><td><span class="badge b-front">画面</span></td><td>embla-carousel</td><td>横スクロールのカルーセル表示</td></tr>
+<tr><td><span class="badge b-front">画面</span></td><td>lucide-react</td><td>アイコン集</td></tr>
+<tr><td><span class="badge b-db">DB通信</span></td><td>@supabase/supabase-js</td><td>ブラウザから DB を叩くためのクライアント</td></tr>
+<tr><td><span class="badge b-db">DB通信</span></td><td>@supabase/ssr</td><td>middleware でセッション（ログイン状態）管理</td></tr>
+<tr><td><span class="badge b-auth">認証</span></td><td>Supabase Auth (implicit flow)</td><td>ログイン処理（X / Google / メール）</td></tr>
+<tr><td><span class="badge b-back">バック</span></td><td>OpenNext for Cloudflare</td><td>Next.js を Cloudflare Workers 上で動かすツール</td></tr>
+<tr><td><span class="badge b-infra">配信</span></td><td>Cloudflare Workers</td><td>本番のアプリ配信先（CDN付き）</td></tr>
+<tr><td><span class="badge b-infra">配信</span></td><td>Wrangler</td><td>Cloudflare Workers の CLI</td></tr>
+<tr><td><span class="badge b-infra">バックアップ</span></td><td>Docker + Node 22 Alpine + AWS EC2</td><td>Cloudflare 障害時のフォールバック（通常は停止）</td></tr>
+<tr><td><span class="badge b-db">DB</span></td><td>Supabase (PostgreSQL)</td><td>DB・認証・ストレージの SaaS</td></tr>
+</tbody>
+</table>
+</section>
+
+<!-- ====================================================== -->
+<section id="envs">
+<h2>4. 3つのデプロイ環境</h2>
+<p>このアプリには「<strong>本番</strong>」「<strong>検証（dev）</strong>」「<strong>フォールバック（EC2）</strong>」の3つの環境があります。</p>
+
+<table>
+<thead>
+  <tr><th>環境</th><th>URL</th><th>参照する Supabase</th><th>更新タイミング</th></tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>本番</strong></td>
+  <td><code>tierlog.app</code></td>
+  <td>production DB</td>
+  <td><code>main</code> branch に push されたら自動デプロイ（3〜5分）</td>
+</tr>
+<tr>
+  <td><strong>検証 (dev)</strong></td>
+  <td><code>dev-duepure-tracker.jianrenzhongtian7.workers.dev</code></td>
+  <td>staging DB（uqndrkax...）</td>
+  <td><code>dev</code> branch に push されたら自動デプロイ</td>
+</tr>
+<tr>
+  <td><strong>EC2 フォールバック</strong></td>
+  <td><code>http://54.152.11.99:3000</code></td>
+  <td>production DB（本番と共通）</td>
+  <td>通常は停止中。Cloudflare障害時のみ手動起動</td>
+</tr>
+</tbody>
+</table>
+
+<div class="callout warn">
+  <strong>注意</strong> ─ <code>dev</code> branch のビルドは <code>scripts/prepare-cloudflare-env.sh</code> が <code>STAGING_NEXT_PUBLIC_*</code> 変数を <code>NEXT_PUBLIC_*</code> にコピーして、参照する Supabase を切り替えています。これにより<strong>本番データを壊さずに dev で検証</strong>できる仕組みです。
+</div>
+</section>
+
+<!-- ====================================================== -->
+<section id="dirs">
+<h2>5. リポジトリの構造</h2>
+<p>主要なフォルダの役割を、上から順に見ていきます。</p>
+
+<pre class="tree">
+<span class="dir">duepure-tracker/</span>
+├── <span class="dir">src/</span>                          <span class="note">// アプリ本体のソースコード</span>
+│   ├── <span class="dir">app/</span>                      <span class="note">// Next.js App Router の画面（URL = フォルダ構造）</span>
+│   │   ├── <span class="dir">dm/</span>                   <span class="note">// デュエプレ用ページ群</span>
+│   │   ├── <span class="dir">pokepoke/</span>             <span class="note">// ポケポケ用ページ群</span>
+│   │   ├── <span class="dir">auth/</span>                 <span class="note">// ログイン画面・コールバック</span>
+│   │   ├── <span class="dir">account/</span>              <span class="note">// アカウント設定</span>
+│   │   ├── <span class="dir">admin/</span>                <span class="note">// 運営管理者ダッシュボード</span>
+│   │   ├── <span class="dir">share/[id]/</span>           <span class="note">// 戦績シェア用ページ</span>
+│   │   ├── <span class="dir">api/</span>                  <span class="note">// サーバーサイド API ルート</span>
+│   │   ├── <span class="dir">terms/</span>, <span class="dir">privacy/</span>      <span class="note">// 利用規約・プライバシーポリシー</span>
+│   │   ├── <span class="file">layout.tsx</span>            <span class="note">// 全ページの共通レイアウト（HTML外枠・テーマ・PWA等）</span>
+│   │   └── <span class="file">globals.css</span>           <span class="note">// 全体スタイル</span>
+│   ├── <span class="dir">components/</span>               <span class="note">// 再利用可能な React 部品</span>
+│   │   ├── <span class="dir">ui/</span>                   <span class="note">// 基本部品（ボタン・Chip・Skeleton等）</span>
+│   │   ├── <span class="dir">battle/</span>               <span class="note">// 対戦記録フォーム・履歴一覧</span>
+│   │   ├── <span class="dir">stats/</span>                <span class="note">// 統計グラフ</span>
+│   │   ├── <span class="dir">share/</span>                <span class="note">// シェア画像生成</span>
+│   │   ├── <span class="dir">admin/</span>                <span class="note">// 管理者画面の部品</span>
+│   │   ├── <span class="dir">layout/</span>               <span class="note">// BottomNav（下部タブナビ）</span>
+│   │   ├── <span class="dir">providers/</span>            <span class="note">// React Context（テーマ・BAN判定）</span>
+│   │   ├── <span class="dir">pwa/</span>                  <span class="note">// PWA インストールプロンプト</span>
+│   │   └── <span class="file">ErrorBoundary.tsx</span>     <span class="note">// 画面エラーキャッチ</span>
+│   ├── <span class="dir">lib/</span>                      <span class="note">// 画面に依存しないロジック</span>
+│   │   ├── <span class="dir">actions/</span>              <span class="note">// DB 操作の関数集（実質「クライアントから呼ぶ薄いAPI層」）</span>
+│   │   ├── <span class="dir">supabase/</span>             <span class="note">// Supabase クライアント生成・型定義</span>
+│   │   ├── <span class="dir">games/</span>                <span class="note">// マルチゲーム定義（dm / pokepoke のメタデータ）</span>
+│   │   ├── <span class="dir">battle/</span>               <span class="note">// 対戦記録ロジック</span>
+│   │   ├── <span class="dir">discord/</span>              <span class="note">// Discord連携ロジック</span>
+│   │   ├── <span class="dir">pokepoke/</span>             <span class="note">// ポケポケ固有データ（カード名等）</span>
+│   │   ├── <span class="file">cf-env.ts</span>             <span class="note">// Cloudflare Workers の secret 取得（getServerEnv）</span>
+│   │   ├── <span class="file">stats-utils.ts</span>        <span class="note">// 勝率計算・色判定</span>
+│   │   ├── <span class="file">theme.ts</span>              <span class="note">// ダーク/ライトテーマ</span>
+│   │   └── <span class="file">share-utils.ts</span>        <span class="note">// シェア用ユーティリティ</span>
+│   ├── <span class="dir">hooks/</span>                    <span class="note">// React カスタムフック</span>
+│   │   ├── <span class="file">use-user.ts</span>           <span class="note">// ログインユーザー情報</span>
+│   │   ├── <span class="file">use-format.ts</span>         <span class="note">// フォーマット切替（ND/AD等）</span>
+│   │   ├── <span class="file">use-selected-game.ts</span>  <span class="note">// 現在選択中のゲーム</span>
+│   │   ├── <span class="file">use-active-team.ts</span>    <span class="note">// 表示中のチーム</span>
+│   │   └── <span class="file">use-long-press.ts</span>     <span class="note">// 長押し検知</span>
+│   └── <span class="file">middleware.ts</span>             <span class="note">// 全リクエストに挟む処理（Rate limit / 旧URL→新URL転送 / セッション更新）</span>
+├── <span class="dir">supabase/</span>
+│   └── <span class="dir">migrations/</span>               <span class="note">// DBスキーマ変更履歴 (63本のSQLファイル)</span>
+├── <span class="dir">scripts/</span>                      <span class="note">// 補助スクリプト</span>
+│   ├── <span class="file">prepare-cloudflare-env.sh</span> <span class="note">// dev branch ビルド時の環境変数切替</span>
+│   ├── <span class="file">sync-staging-data.mjs</span>     <span class="note">// 本番→staging データ同期</span>
+│   ├── <span class="file">generate-pwa-icons.mjs</span>    <span class="note">// PWA用アイコン生成</span>
+│   └── <span class="file">generate-pokemon-names.ts</span> <span class="note">// ポケモンカード名辞書生成</span>
+├── <span class="dir">public/</span>                       <span class="note">// 静的ファイル（アイコン・manifest.json・SW）</span>
+├── <span class="dir">docs/</span>                         <span class="note">// 設計メモ・運用手順</span>
+│   ├── <span class="dir">plans/</span>                    <span class="note">// 実装計画</span>
+│   ├── <span class="dir">runbooks/</span>                 <span class="note">// 運用手順書</span>
+│   └── <span class="dir">reports/</span>                  <span class="note">// 実装レポート</span>
+├── <span class="file">CLAUDE.md</span> / <span class="file">AGENTS.md</span>          <span class="note">// Claude Code への指示書（同期する2ファイル）</span>
+├── <span class="file">DESIGN.md</span>                    <span class="note">// UI設計のガイドライン</span>
+├── <span class="file">wrangler.jsonc</span>               <span class="note">// Cloudflare Workers 設定</span>
+├── <span class="file">open-next.config.ts</span>          <span class="note">// OpenNext アダプタ設定</span>
+├── <span class="file">next.config.ts</span>               <span class="note">// Next.js 設定</span>
+├── <span class="file">tsconfig.json</span>                <span class="note">// TypeScript 設定</span>
+├── <span class="file">eslint.config.mjs</span>            <span class="note">// Lint ルール</span>
+├── <span class="file">Dockerfile</span>                   <span class="note">// EC2 用 Docker イメージ定義</span>
+└── <span class="file">package.json</span>                 <span class="note">// 依存ライブラリと npm スクリプト</span>
+</pre>
+
+<div class="callout">
+  <strong>覚えておくべき3フォルダ</strong> ─ <code>src/app/</code> が「ページ」、<code>src/components/</code> が「画面の部品」、<code>src/lib/actions/</code> が「DBとの会話」。この3つが分かればだいたい読める。
+</div>
+</section>
+
+<!-- ====================================================== -->
+<section id="pages">
+<h2>6. ページとURLの構成</h2>
+<p>Next.js の App Router では <strong>「URL = フォルダ構造」</strong>です。たとえば <code>/dm/battle</code> は <code>src/app/dm/battle/page.tsx</code> に対応します。</p>
+
+<h3>主要ページ一覧</h3>
+<table>
+<thead><tr><th>URL</th><th>役割</th><th>ファイル</th></tr></thead>
+<tbody>
+<tr><td><code>/dm/home</code></td><td>デュエプレのホーム（チーム選択・Discord連携）</td><td><code>src/app/dm/home/page.tsx</code></td></tr>
+<tr><td><code>/dm/battle</code></td><td>対戦記録（メイン機能）と履歴タブ</td><td><code>src/app/dm/battle/page.tsx</code></td></tr>
+<tr><td><code>/dm/decks</code></td><td>自分のデッキ一覧・編集</td><td><code>src/app/dm/decks/page.tsx</code></td></tr>
+<tr><td><code>/dm/stats</code></td><td>統計トップ（勝率・期間集計）</td><td><code>src/app/dm/stats/page.tsx</code></td></tr>
+<tr><td><code>/dm/stats/deck/[deckName]</code></td><td>特定デッキの詳細統計（動的ルート）</td><td><code>src/app/dm/stats/deck/[deckName]/page.tsx</code></td></tr>
+<tr><td><code>/dm/stats/opponent/[deckName]</code></td><td>相手デッキ別の対面統計</td><td><code>src/app/dm/stats/opponent/[deckName]/page.tsx</code></td></tr>
+<tr><td><code>/dm/stats/environment</code></td><td>環境分布（円グラフ）</td><td><code>src/app/dm/stats/environment/page.tsx</code></td></tr>
+<tr><td><code>/pokepoke/...</code></td><td>同じ構造のポケポケ版（dm と並列）</td><td><code>src/app/pokepoke/*</code></td></tr>
+<tr><td><code>/auth</code></td><td>ログイン画面（X / Google / メール）</td><td><code>src/app/auth/page.tsx</code></td></tr>
+<tr><td><code>/auth/callback</code></td><td>OAuth コールバック</td><td><code>src/app/auth/callback/page.tsx</code></td></tr>
+<tr><td><code>/account</code></td><td>アカウント設定・退会</td><td><code>src/app/account/page.tsx</code></td></tr>
+<tr><td><code>/account/security</code></td><td>セキュリティ設定</td><td><code>src/app/account/security/page.tsx</code></td></tr>
+<tr><td><code>/admin/...</code></td><td>管理者ダッシュボード（ユーザー・相手デッキ・検知ルール等）</td><td><code>src/app/admin/*</code></td></tr>
+<tr><td><code>/share/[id]</code></td><td>戦績シェア用の公開ページ</td><td><code>src/app/share/[id]/page.tsx</code></td></tr>
+<tr><td><code>/terms</code> / <code>/privacy</code></td><td>利用規約・プライバシーポリシー</td><td>各 <code>page.tsx</code></td></tr>
+</tbody>
+</table>
+
+<h3>API ルート（サーバー側で実行される処理）</h3>
+<table>
+<thead><tr><th>URL</th><th>役割</th></tr></thead>
+<tbody>
+<tr><td><code>/api/og/[id]</code></td><td>戦績ページの OGP 画像を動的生成（SNSシェア時のサムネ）</td></tr>
+<tr><td><code>/api/discord/start</code></td><td>Discord OAuth 開始</td></tr>
+<tr><td><code>/api/discord/callback</code></td><td>Discord OAuth コールバック</td></tr>
+<tr><td><code>/api/discord/refresh-guilds</code></td><td>Discord サーバー（ギルド）一覧の再取得</td></tr>
+<tr><td><code>/api/admin/limitless-sync</code></td><td>運営: Limitless 大会データ取り込み</td></tr>
+<tr><td><code>/api/internal/limitless-sync</code></td><td>内部 cron 用 Limitless 同期</td></tr>
+<tr><td><code>/api/internal/detection-scan</code></td><td>不正検知の定期スキャン</td></tr>
+</tbody>
+</table>
+</section>
+
+<!-- ====================================================== -->
+<section id="flow">
+<h2>7. データの流れ</h2>
+<p>ユーザーが「対戦結果を記録」ボタンを押した時、データはどう流れるか？</p>
+
+<div class="flow">
+  <div class="flow-step">
+    <div class="title"><span class="num">1</span>ユーザー操作</div>
+    <div class="desc">ブラウザで「保存」ボタンをタップ</div>
+  </div>
+  <div class="flow-step">
+    <div class="title"><span class="num">2</span>React コンポーネント</div>
+    <div class="desc"><code>BattleRecordForm.tsx</code> が onSubmit を発火</div>
+  </div>
+  <div class="flow-step">
+    <div class="title"><span class="num">3</span>actions 層</div>
+    <div class="desc"><code>battle-actions.ts</code> の <code>recordBattle()</code> を呼ぶ</div>
+  </div>
+  <div class="flow-step">
+    <div class="title"><span class="num">4</span>Supabase クライアント</div>
+    <div class="desc"><code>supabase.from('battles').insert(...)</code> 実行</div>
+  </div>
+  <div class="flow-step">
+    <div class="title"><span class="num">5</span>RLS チェック</div>
+    <div class="desc">DB 側で「このユーザーは自分の行しか書けない」を検証</div>
+  </div>
+  <div class="flow-step">
+    <div class="title"><span class="num">6</span>DB 書き込み</div>
+    <div class="desc">PostgreSQL に保存。トリガーで派生処理（相手デッキ自動追加等）</div>
+  </div>
+</div>
+
+<h3><code>src/lib/actions/</code> の中身</h3>
+<table>
+<thead><tr><th>ファイル</th><th>行数</th><th>担当</th></tr></thead>
+<tbody>
+<tr><td><code>account-actions.ts</code></td><td>166</td><td>アカウント情報の取得・退会・X連携</td></tr>
+<tr><td><code>admin-actions.ts</code></td><td>849</td><td>管理者機能（ユーザー一覧・BAN・相手デッキマスタ管理）</td></tr>
+<tr><td><code>battle-actions.ts</code></td><td>286</td><td>対戦の記録・編集・削除・履歴取得</td></tr>
+<tr><td><code>deck-actions.ts</code></td><td>169</td><td>自分のデッキの作成・編集・並び替え</td></tr>
+<tr><td><code>stats-actions.ts</code></td><td>958</td><td>勝率・期間集計・環境分布の取得（一番大きい）</td></tr>
+<tr><td><code>team-actions.ts</code></td><td>192</td><td>Discord 連携・チーム表示切替・メンバー取得</td></tr>
+<tr><td><code>feedback-actions.ts</code></td><td>16</td><td>ユーザーフィードバック送信</td></tr>
+<tr><td><code>opponent-deck-display.ts</code></td><td>47</td><td>相手デッキの表示名解決</td></tr>
+</tbody>
+</table>
+
+<div class="callout">
+  <strong>actions 層について</strong> ─ ファイル名に <em>"actions"</em> とありますが、Next.js の Server Actions は使っていません。これらは<strong>クライアントから呼ぶ普通の async 関数</strong>で、中で <code>supabase-js</code> を呼んでいるだけです。「画面とDBの間に挟む薄い層」と理解すればOK。
+</div>
+</section>
+
+<!-- ====================================================== -->
+<section id="db">
+<h2>8. データベース構造</h2>
+<p>Supabase の PostgreSQL に保存されるテーブルのうち、特に重要なものを紹介します（マイグレーションは <code>supabase/migrations/</code> に時系列順で 63 本）。</p>
+
+<h3>ユーザー・チーム関連</h3>
+<table>
+<thead><tr><th>テーブル</th><th>役割</th></tr></thead>
+<tbody>
+<tr><td><code>profiles</code></td><td>ユーザーのプロフィール情報（表示名・アイコン・X連携情報）</td></tr>
+<tr><td><code>discord_connections</code></td><td>Discord 連携情報（access_token は service_role 経由のみ）。<code>(user_id, game_title)</code> 複合UNIQUE</td></tr>
+<tr><td><code>teams</code></td><td>Discord サーバー = チーム</td></tr>
+<tr><td><code>team_members</code></td><td>チームの所属メンバー</td></tr>
+<tr><td><code>user_stage_history</code></td><td>ユーザーのステージ（信頼度）変更履歴</td></tr>
+</tbody>
+</table>
+
+<h3>対戦・デッキ関連</h3>
+<table>
+<thead><tr><th>テーブル</th><th>役割</th></tr></thead>
+<tbody>
+<tr><td><code>decks</code></td><td>ユーザーが登録した自分のデッキ。<code>game_title</code> でゲーム分離</td></tr>
+<tr><td><code>battles</code></td><td>対戦履歴本体。1行 = 1試合。<code>format</code> / <code>game_title</code> 付き</td></tr>
+<tr><td><code>deck_tunings</code></td><td>デッキ調整版の管理（同じデッキの派生）</td></tr>
+<tr><td><code>opponent_deck_master</code></td><td>相手デッキマスタ（運営定義）。ゲーム別</td></tr>
+<tr><td><code>opponent_deck_settings</code></td><td>相手デッキの表示順・色・カテゴリ設定</td></tr>
+</tbody>
+</table>
+
+<h3>共有・シェア関連</h3>
+<table>
+<thead><tr><th>テーブル</th><th>役割</th></tr></thead>
+<tbody>
+<tr><td><code>shares</code></td><td>戦績シェアページの記録（URL の <code>[id]</code> に対応）</td></tr>
+<tr><td>Storage: <code>share-images</code></td><td>シェア用の画像保存先（public bucket）</td></tr>
+</tbody>
+</table>
+
+<h3>品質・検知関連（運営機能）</h3>
+<table>
+<thead><tr><th>テーブル</th><th>役割</th></tr></thead>
+<tbody>
+<tr><td><code>quality_scoring_rules</code></td><td>不正・低品質ユーザーを判定するルール定義</td></tr>
+<tr><td><code>quality_scoring_settings</code></td><td>判定の閾値設定</td></tr>
+<tr><td><code>quality_score_snapshots</code></td><td>各ユーザーのスコア履歴</td></tr>
+<tr><td><code>quality_admin_bonus</code></td><td>運営による手動加点</td></tr>
+<tr><td><code>detection_rules</code></td><td>異常検知ルール（連投・コピペ等）</td></tr>
+<tr><td><code>detection_alerts</code></td><td>検知されたアラート履歴</td></tr>
+</tbody>
+</table>
+
+<div class="callout warn">
+  <strong>RLS（Row Level Security）が要</strong> ─ ブラウザから直接 DB を叩く設計なので、誰がどの行を読み書きできるかは<strong>DB側のポリシー</strong>で守られています。<code>20260424000001_security_hardening_*</code> 以降のマイグレーションがその強化履歴。本番公開前にも追加でハードニング中（<code>docs/plans/2026-05-11_db_hardening_pre_public.md</code>）。
+</div>
+
+<h3>主なマイグレーションの節目</h3>
+<ul class="compact">
+  <li><code>20260304</code> — 初期スキーマ（profiles / decks / battles）</li>
+  <li><code>20260306</code> — フォーマット列追加（ND / AD）</li>
+  <li><code>20260322</code> — 統計用 RPC 関数群（stats_rpcs）</li>
+  <li><code>20260406</code> — Discord チーム機能</li>
+  <li><code>20260411</code> — Dual モード管理（ND/AD 同時運用）</li>
+  <li><code>20260412</code> — X連携・ステージ機能・対面メモ</li>
+  <li><code>20260414</code> — 品質スコアリング</li>
+  <li><code>20260418</code> — シェア画像 Storage bucket</li>
+  <li><code>20260419</code> — <strong>マルチゲーム対応 (Stage 1 / 2)</strong></li>
+  <li><code>20260424</code> — RLS セキュリティ強化フェーズ1</li>
+  <li><code>20260426</code> — SECURITY DEFINER 関数の search_path 強化</li>
+  <li><code>20260509</code> — RPC 権限の最小化（公開前ハードニング）</li>
+</ul>
+</section>
+
+<!-- ====================================================== -->
+<section id="auth">
+<h2>9. ログインの仕組み</h2>
+<p>ログインは Supabase Auth の <strong>implicit flow</strong> を使っています。流れは次の通り。</p>
+
+<div class="flow">
+  <div class="flow-step">
+    <div class="title"><span class="num">1</span><code>/auth</code> 画面</div>
+    <div class="desc">X / Google / メールリンク のボタンを押す</div>
+  </div>
+  <div class="flow-step">
+    <div class="title"><span class="num">2</span>外部プロバイダ</div>
+    <div class="desc">X や Google のログイン画面にリダイレクト</div>
+  </div>
+  <div class="flow-step">
+    <div class="title"><span class="num">3</span><code>/auth/callback</code></div>
+    <div class="desc">URL のハッシュからトークン取得 → セッション確立</div>
+  </div>
+  <div class="flow-step">
+    <div class="title"><span class="num">4</span><code>middleware.ts</code></div>
+    <div class="desc">毎リクエストで Cookie からセッション復元</div>
+  </div>
+  <div class="flow-step">
+    <div class="title"><span class="num">5</span>ホーム画面へ</div>
+    <div class="desc"><code>/dm/home</code> または <code>/pokepoke/home</code></div>
+  </div>
+</div>
+
+<h3>関連ファイル</h3>
+<table>
+<tbody>
+<tr><td><code>src/lib/supabase/client.ts</code></td><td>ブラウザ用クライアント（implicit flow 設定）</td></tr>
+<tr><td><code>src/lib/supabase/server.ts</code></td><td>middleware / API ルート用クライアント</td></tr>
+<tr><td><code>src/middleware.ts</code></td><td>セッション更新 + Rate limit + 旧URL転送</td></tr>
+<tr><td><code>src/app/auth/callback/page.tsx</code></td><td>OAuth コールバック処理</td></tr>
+<tr><td><code>src/components/providers/BanGuard.tsx</code></td><td>BAN ユーザーの画面遮断</td></tr>
+</tbody>
+</table>
+
+<div class="callout warn">
+  <strong>変更厳禁</strong> ─ <code>CLAUDE.md</code> に「既存のauth設定（implicit flow、X/Googleログイン、middleware.ts、client.ts）は変更しないこと」と明記されています。auth/callback も既存の SIGNED_IN 処理は触らず、追加分のみOK。
+</div>
+</section>
+
+<!-- ====================================================== -->
+<section id="multigame">
+<h2>10. マルチゲーム対応</h2>
+<p>このアプリは元々デュエプレ専用でしたが、2026年4月のマイグレーションで <strong>1リポジトリで複数ゲームを扱う</strong>構造に拡張されました。</p>
+
+<h3>ゲームレジストリ（<code>src/lib/games/index.ts</code>）</h3>
+<pre><code>export const GAMES = {
+  dm: {
+    slug: "dm",
+    trackerName: "Tierlog - デュエプレ",
+    formats: [{ code: "ND" }, { code: "AD" }],
+    defaultFormat: "ND",
+  },
+  pokepoke: {
+    slug: "pokepoke",
+    trackerName: "ポケポケトラッカー",
+    formats: [{ code: "RANKED" }, { code: "RANDOM" }],
+    defaultFormat: "RANKED",
+  },
+};</code></pre>
+
+<h3>URL 構造のルール</h3>
+<table>
+<thead><tr><th>パターン</th><th>例</th><th>説明</th></tr></thead>
+<tbody>
+<tr><td><code>/{game}/...</code></td><td><code>/dm/home</code>, <code>/pokepoke/battle</code></td><td>ゲーム別ページ</td></tr>
+<tr><td><code>/account</code>, <code>/auth</code>, <code>/admin</code></td><td>—</td><td>ゲーム非依存（共通）</td></tr>
+<tr><td><code>/share/[id]</code></td><td>—</td><td>シェア URL（中で game_title 解決）</td></tr>
+</tbody>
+</table>
+
+<h3>DB のゲーム分離</h3>
+<p>ゲーム別のテーブル（<code>decks</code>, <code>battles</code>, <code>deck_tunings</code>, <code>opponent_deck_master</code>, <code>shares</code>, <code>teams</code>, <code>discord_connections</code>, <code>detection_alerts</code>）には <strong><code>game_title</code> カラム</strong> があり、これでゲームをスコープ分離しています。</p>
+
+<div class="callout warn">
+  <strong>新ゲーム追加時の罠</strong> ─ <code>format</code> コードを既存ゲームと<strong>絶対に重複させないこと</strong>。読み込み系 RPC は <code>p_format</code> フィルタだけで分離している前提なので、重複すると別ゲームのデータが混ざる。例: 遊戯王マスターデュエルを追加するなら <code>RANKED_YGO</code> のような名前にする。
+</div>
+</section>
+
+<!-- ====================================================== -->
+<section id="deploy">
+<h2>11. 開発・デプロイの流れ</h2>
+<p>このプロジェクトの<strong>厳格なルール</strong>: 全ての変更は必ず <code>dev</code> branch 経由。<code>main</code> へ直接 push は禁止。</p>
+
+<div class="flow">
+  <div class="flow-step">
+    <div class="title"><span class="num">1</span>ローカルで編集</div>
+    <div class="desc"><code>git checkout dev</code> してから作業</div>
+  </div>
+  <div class="flow-step">
+    <div class="title"><span class="num">2</span>dev に push</div>
+    <div class="desc"><code>git push origin dev</code></div>
+  </div>
+  <div class="flow-step">
+    <div class="title"><span class="num">3</span>Cloudflare 自動ビルド</div>
+    <div class="desc">3〜5分で dev preview URL に反映</div>
+  </div>
+  <div class="flow-step">
+    <div class="title"><span class="num">4</span>preview で動作確認</div>
+    <div class="desc"><code>dev-duepure-tracker.jianrenzhongtian7.workers.dev</code></div>
+  </div>
+  <div class="flow-step">
+    <div class="title"><span class="num">5</span>ユーザーの「本番反映」指示</div>
+    <div class="desc">明示的なOKが出るまで本番反映しない</div>
+  </div>
+  <div class="flow-step">
+    <div class="title"><span class="num">6</span>main へ merge</div>
+    <div class="desc"><code>git checkout main && git merge dev && git push origin main</code></div>
+  </div>
+  <div class="flow-step">
+    <div class="title"><span class="num">7</span>本番に自動デプロイ</div>
+    <div class="desc">同じく3〜5分で反映</div>
+  </div>
+</div>
+
+<h3>npm スクリプト</h3>
+<table>
+<thead><tr><th>コマンド</th><th>用途</th></tr></thead>
+<tbody>
+<tr><td><code>npm run dev</code></td><td>ローカル開発サーバー（<code>localhost:3000</code>）</td></tr>
+<tr><td><code>npm run build</code></td><td>本番ビルド（環境変数準備 + Next ビルド）</td></tr>
+<tr><td><code>npm run lint</code></td><td>ESLint チェック</td></tr>
+<tr><td><code>npm run preview</code></td><td>Cloudflare Workers でローカルプレビュー</td></tr>
+<tr><td><code>npm run deploy</code></td><td>手動で Cloudflare へデプロイ（通常は自動なので使わない）</td></tr>
+<tr><td><code>npm run staging:refresh</code></td><td>本番→staging データ同期（手動・dry-run 推奨）</td></tr>
+</tbody>
+</table>
+
+<div class="callout warn">
+  <strong>禁止コマンド</strong> ─ <code>npx next build</code> / <code>npm run deploy</code> は通常実行不要（本番は Cloudflare 自動ビルド）。DB マイグレーション (<code>npx supabase db push</code>) は<strong>ユーザーの明示指示後のみ</strong>、しかも<strong>main 本番反映が完了してから</strong>実行する（dev/prod 共通DBのため）。
+</div>
+</section>
+
+<!-- ====================================================== -->
+<section id="features">
+<h2>12. 主要機能の一覧</h2>
+<p>ユーザー視点での主要機能をまとめます。</p>
+
+<table>
+<thead><tr><th>機能</th><th>関連ページ／部品</th><th>関連テーブル</th></tr></thead>
+<tbody>
+<tr>
+  <td><strong>対戦記録</strong></td>
+  <td><code>/dm/battle</code>, <code>BattleRecordForm.tsx</code></td>
+  <td><code>battles</code>, <code>opponent_deck_master</code></td>
+</tr>
+<tr>
+  <td><strong>履歴・編集</strong></td>
+  <td><code>BattleHistoryList.tsx</code>, <code>EditBattleModal.tsx</code></td>
+  <td><code>battles</code></td>
+</tr>
+<tr>
+  <td><strong>デッキ管理</strong></td>
+  <td><code>/dm/decks</code>, <code>DeckList.tsx</code>（@dnd-kit で並び替え）</td>
+  <td><code>decks</code>, <code>deck_tunings</code></td>
+</tr>
+<tr>
+  <td><strong>勝率・統計</strong></td>
+  <td><code>/dm/stats/*</code>, recharts によるグラフ</td>
+  <td><code>battles</code> + RPC 関数群</td>
+</tr>
+<tr>
+  <td><strong>環境分布</strong></td>
+  <td><code>/dm/stats/environment</code></td>
+  <td>RPC <code>get_environment_stats_range</code></td>
+</tr>
+<tr>
+  <td><strong>Discord チーム共有</strong></td>
+  <td><code>/dm/home</code>, <code>/api/discord/*</code></td>
+  <td><code>teams</code>, <code>team_members</code>, <code>discord_connections</code></td>
+</tr>
+<tr>
+  <td><strong>戦績シェア（OGP動的生成）</strong></td>
+  <td><code>/share/[id]</code>, <code>/api/og/[id]</code></td>
+  <td><code>shares</code>, Storage <code>share-images</code></td>
+</tr>
+<tr>
+  <td><strong>PWA インストール</strong></td>
+  <td><code>InstallPrompt.tsx</code>, <code>public/sw.js</code>, <code>manifest.json</code></td>
+  <td>—</td>
+</tr>
+<tr>
+  <td><strong>ダーク／ライトテーマ</strong></td>
+  <td><code>ThemeProvider.tsx</code>, <code>ThemeToggle.tsx</code></td>
+  <td>—（localStorage に保存）</td>
+</tr>
+<tr>
+  <td><strong>運営: ユーザー管理</strong></td>
+  <td><code>/admin/users</code></td>
+  <td><code>profiles</code>, <code>user_stage_history</code></td>
+</tr>
+<tr>
+  <td><strong>運営: 相手デッキマスタ</strong></td>
+  <td><code>/admin/opponent-decks</code></td>
+  <td><code>opponent_deck_master</code>, <code>opponent_deck_settings</code></td>
+</tr>
+<tr>
+  <td><strong>運営: 品質スコアリング</strong></td>
+  <td><code>/admin/quality-scoring</code></td>
+  <td><code>quality_scoring_*</code></td>
+</tr>
+<tr>
+  <td><strong>運営: 異常検知</strong></td>
+  <td><code>/admin/detection</code>, <code>/api/internal/detection-scan</code></td>
+  <td><code>detection_rules</code>, <code>detection_alerts</code></td>
+</tr>
+<tr>
+  <td><strong>運営: フィードバック閲覧</strong></td>
+  <td><code>/admin/feedback</code></td>
+  <td><code>feedback</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+
+<!-- ====================================================== -->
+<section id="glossary">
+<h2>13. 用語ミニ辞典</h2>
+<table>
+<tbody>
+<tr><td><strong>App Router</strong></td><td>Next.js の新しいルーティング方式。<code>src/app/</code> 配下のフォルダ構造がそのまま URL になる。</td></tr>
+<tr><td><strong>Cloudflare Workers</strong></td><td>世界中の CDN エッジで JS を実行するサーバーレス基盤。本番アプリの実行先。</td></tr>
+<tr><td><strong>OpenNext</strong></td><td>Next.js を Cloudflare / AWS Lambda 等で動かすためのアダプタ。<code>@opennextjs/cloudflare</code> を使用。</td></tr>
+<tr><td><strong>Supabase</strong></td><td>PostgreSQL + 認証 + ストレージをまとめて提供する SaaS。Firebase の OSS版に近い。</td></tr>
+<tr><td><strong>RLS</strong></td><td>Row Level Security。PostgreSQL の行単位アクセス制御。「自分の行しか読めない／書けない」をDBで強制。</td></tr>
+<tr><td><strong>RPC</strong></td><td>PostgreSQL の関数。Supabase クライアントから <code>supabase.rpc('関数名', {引数})</code> で呼べる。複雑な集計に使う。</td></tr>
+<tr><td><strong>SECURITY DEFINER</strong></td><td>PostgreSQL の関数属性。関数を「定義者の権限で」実行する。RLS をすり抜けられるので search_path 固定など追加対策が必要。</td></tr>
+<tr><td><strong>implicit flow</strong></td><td>OAuth の認可フローの一種。URL ハッシュにトークンを載せる方式。Supabase の SPA デフォルト。</td></tr>
+<tr><td><strong>PWA</strong></td><td>Progressive Web App。Web アプリをスマホにインストールしてネイティブアプリ風に使える仕組み。</td></tr>
+<tr><td><strong>OGP</strong></td><td>Open Graph Protocol。SNS でURL を貼った時に表示されるサムネ画像・タイトル・説明を制御する meta タグ。</td></tr>
+<tr><td><strong>Service Worker</strong></td><td>ブラウザがバックグラウンドで動かす JS。オフライン対応や push 通知の核。</td></tr>
+<tr><td><strong>middleware</strong></td><td>Next.js で全リクエストの前に挟む処理。このアプリでは rate limit と セッション更新と旧URL転送に使用。</td></tr>
+<tr><td><strong>migration</strong></td><td>DB のスキーマ変更を時系列で管理する SQL ファイル群。<code>supabase/migrations/</code> に蓄積。</td></tr>
+<tr><td><strong>OAuth コールバック</strong></td><td>外部プロバイダ（X / Google）でログイン後に、自アプリの指定 URL に戻ってくる処理。</td></tr>
+<tr><td><strong>dev / staging / production</strong></td><td>dev = 開発用、staging = 検証用、production = 本番用。このアプリでは dev preview が staging DB を参照する。</td></tr>
+</tbody>
+</table>
+</section>
+
+<hr>
+
+<div class="card">
+  <h3 style="margin-top:0; color: var(--accent);">📚 さらに学ぶ／参照すべきドキュメント</h3>
+  <ul class="compact">
+    <li><code>CLAUDE.md</code> — 開発ルール・禁止事項・ワークフロー全体（このドキュメントの一次情報源）</li>
+    <li><code>DESIGN.md</code> — UI のデザインガイドライン（色・スペーシング・コンポーネント設計）</li>
+    <li><code>docs/runbooks/staging-data-sync.md</code> — 本番→staging データ同期手順</li>
+    <li><code>docs/plans/2026-05-11_db_hardening_pre_public.md</code> — 公開前 DB ハードニング計画</li>
+    <li><code>supabase/migrations/</code> — DB スキーマ変更の全履歴</li>
+    <li><code>wrangler.jsonc</code> + <code>open-next.config.ts</code> — Cloudflare 配信設定</li>
+  </ul>
+</div>
+
+<footer>
+  duepure-tracker / アプリ構造ガイド — 一般公開前の理解用ドキュメント<br>
+  生成: 2026-05-11
+</footer>
+
+</div>
+</body>
+</html>

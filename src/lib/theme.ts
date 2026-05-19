@@ -1,7 +1,7 @@
 export type Theme = "light" | "dark" | "system";
 export type ResolvedTheme = "light" | "dark";
 
-export const THEME_STORAGE_KEY = "duepure-theme";
+export const THEME_STORAGE_KEY = "tierlog-theme";
 
 export function readStoredTheme(): Theme {
   if (typeof window === "undefined") return "dark";

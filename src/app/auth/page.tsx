@@ -129,7 +129,7 @@ export default function AuthPage() {
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <h1 className="text-[24px] font-bold text-foreground">
-            ゲーム戦績トラッカー
+            Tierlog
           </h1>
           <p className="text-[13px] text-muted-foreground mt-2">
             対戦記録・環境分析ツール

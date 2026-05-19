@@ -1,4 +1,4 @@
-const CACHE_NAME = "dp-tracker-v2";
+const CACHE_NAME = "tierlog-v1";
 const PRECACHE_URLS = ["/manifest.json"];
 
 self.addEventListener("install", (event) => {
