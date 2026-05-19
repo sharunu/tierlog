@@ -31,6 +31,7 @@ import {
   getOpponentDeckMasterList,
   getBattleCountsForPeriod,
   updateOpponentDeckNameJa,
+  MissingNameEnError,
   triggerLimitlessSync,
   getOpponentDeckSettings,
 } from "@/lib/actions/admin-actions";
@@ -398,12 +399,22 @@ export function OpponentDeckManager({
       return;
     }
     try {
-      await updateOpponentDeckNameJa(deckId, value);
+      const result = await updateOpponentDeckNameJa(deckId, value);
       setDecks((prev) =>
         prev.map((d) =>
           d.id === deckId
-            ? { ...d, name_ja: value.trim() || null, name_ja_is_manual: value.trim().length > 0 }
+            ? {
+                ...d,
+                name: result.updated_name,
+                name_ja: result.name_ja,
+                name_ja_is_manual: result.name_ja_is_manual,
+              }
             : d,
+        ),
+      );
+      setStatsDecks((prev) =>
+        prev.map((d) =>
+          d.id === deckId ? { ...d, name: result.updated_name } : d,
         ),
       );
       const next = { ...nameJaEditing };
@@ -411,6 +422,13 @@ export function OpponentDeckManager({
       setNameJaEditing(next);
     } catch (e) {
       console.error(e);
+      if (e instanceof MissingNameEnError) {
+        alert("再生成元の英名がないため自動翻訳できません。和名を直接入力してください。");
+        const next = { ...nameJaEditing };
+        delete next[deckId];
+        setNameJaEditing(next);
+        return;
+      }
       alert("名称保存に失敗しました");
     }
   };

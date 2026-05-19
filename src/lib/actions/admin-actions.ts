@@ -3,6 +3,23 @@ import { DEFAULT_GAME, type GameSlug } from "@/lib/games";
 import type { DetailedPersonalStats, TurnOrderSummary, OpponentDetail, TrendRow } from "@/lib/actions/stats-actions";
 import { winRate, bumpWLD, type BattleResult } from "@/lib/battle/result-format";
 import { stripAllWhitespace } from "@/lib/util/whitespace";
+import { translateDeckName } from "@/lib/pokepoke/deck-translator";
+
+export class MissingNameEnError extends Error {
+  constructor(deckId: string) {
+    super(`missing name_en (deck id=${deckId})`);
+    this.name = "MissingNameEnError";
+  }
+}
+
+export type UpdateOpponentDeckNameJaResult = {
+  updated_name: string;
+  old_name: string | null;
+  name_ja: string | null;
+  name_ja_is_manual: boolean;
+  battles_synced: number;
+  cleared: boolean;
+};
 
 async function requireAdmin() {
   const supabase = createClient();
@@ -144,25 +161,61 @@ export async function updateOpponentDeckSettings(
   if (error) throw new Error(error.message);
 }
 
-export async function updateOpponentDeckNameJa(id: string, nameJa: string) {
+export async function updateOpponentDeckNameJa(
+  id: string,
+  nameJa: string,
+): Promise<UpdateOpponentDeckNameJaResult> {
   const supabase = await requireAdmin();
-  // 新 SECURITY DEFINER RPC 経由で実行する:
-  //   - admin 判定 (profiles.is_admin)
-  //   - canonical name 即時更新 (stripAllWhitespace(name_ja))
-  //   - 同 (format, game_title) 内の衝突 pre-check
-  //   - battles.opponent_deck_name 同期 UPDATE (RLS bypass、他ユーザー行含む)
-  // すべて 1 transaction で完結する。詳細は migration 20260519000002 / plan §6.6 参照。
-  const { error } = await supabase.rpc("admin_update_opponent_deck_name_ja", {
+  // 挙動 (2026-05-19 追加修正):
+  //   - 非空入力: manual 経路 (is_manual=true)。p_name_ja をそのまま RPC へ
+  //   - 空入力: auto 経路。対象行の name_en を取得し translateDeckName で再翻訳:
+  //       * name_en 無し → MissingNameEnError を throw (UI で「再生成元の英名が
+  //         ないため自動翻訳できません」アラート + 編集前値に戻す)
+  //       * translateDeckName が null → fallback: name_ja = name_en
+  //         (Limitless 同期の未翻訳 fallback と揃える)
+  //       * 翻訳成功 → name_ja = 翻訳結果
+  //     上記いずれも is_manual=false で RPC を呼ぶ。
+  // RPC 自体は admin 判定 / canonical name 更新 / 衝突 pre-check / battles 同期
+  // UPDATE を 1 transaction で完結させる。詳細は migration 20260519000003 参照。
+  const trimmed = nameJa.trim();
+  let payloadNameJa: string;
+  let isManual: boolean;
+
+  if (trimmed.length > 0) {
+    payloadNameJa = nameJa;
+    isManual = true;
+  } else {
+    const { data: row, error: fetchError } = await supabase
+      .from("opponent_deck_master")
+      .select("name_en")
+      .eq("id", id)
+      .single();
+    if (fetchError) throw new Error(fetchError.message);
+
+    const nameEn = row?.name_en?.trim() ?? "";
+    if (!nameEn) {
+      throw new MissingNameEnError(id);
+    }
+
+    const translated = translateDeckName(nameEn);
+    payloadNameJa = translated && translated.trim() !== "" ? translated : nameEn;
+    isManual = false;
+  }
+
+  const { data, error } = await supabase.rpc("admin_update_opponent_deck_name_ja", {
     p_id: id,
-    p_name_ja: nameJa,
+    p_name_ja: payloadNameJa,
+    p_is_manual: isManual,
   });
   if (error) {
-    // RPC が 'name collision: ...' で reject した場合は UI 向けメッセージに変換
     if (error.message.includes("name collision")) {
       throw new Error(`対面デッキ名が既に存在します (${error.message})`);
     }
     throw new Error(error.message);
   }
+
+  const result = data as UpdateOpponentDeckNameJaResult;
+  return result;
 }
 
 export async function triggerLimitlessSync(): Promise<{

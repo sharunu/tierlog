@@ -873,7 +873,7 @@ export type Database = {
         Returns: Json
       }
       admin_update_opponent_deck_name_ja: {
-        Args: { p_id: string; p_name_ja: string }
+        Args: { p_id: string; p_name_ja: string; p_is_manual?: boolean }
         Returns: Json
       }
       admin_update_user_stage: {
