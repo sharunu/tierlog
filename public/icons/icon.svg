@@ -42,7 +42,7 @@
   <path fill="url(#tierlog-icon-a3-v2-glow)" d="M118 696c154-396 432-548 790-420v566C682 934 354 882 118 696z"/>
   <rect x="40" y="40" width="944" height="944" rx="188" fill="none" stroke="#ffffff" stroke-opacity="0.065" stroke-width="28"/>
   <rect x="86" y="86" width="852" height="852" rx="152" fill="none" stroke="#ffffff" stroke-opacity="0.045" stroke-width="8"/>
-  <g transform="translate(22 52) scale(2.1)" filter="url(#tierlog-icon-a3-v2-card-shadow)">
+  <g transform="translate(22 12) scale(2.1)" filter="url(#tierlog-icon-a3-v2-card-shadow)">
     <rect x="90" y="139" width="156" height="238" rx="25" fill="url(#tierlog-icon-a3-v2-teal)" stroke="#fbfdff" stroke-width="9" transform="rotate(-15 168 258)"/>
     <rect x="135" y="112" width="158" height="247" rx="25" fill="url(#tierlog-icon-a3-v2-blue)" stroke="#fbfdff" stroke-width="9" transform="rotate(-7 214 236)"/>
     <rect x="223" y="122" width="158" height="247" rx="25" fill="url(#tierlog-icon-a3-v2-violet)" stroke="#fbfdff" stroke-width="9" transform="rotate(9 302 246)"/>
