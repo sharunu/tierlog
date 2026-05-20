@@ -1,10 +1,57 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="760" height="200" viewBox="0 0 760 200" role="img" aria-labelledby="title desc">
-  <title id="title">Tierlog logo</title>
-  <desc id="desc">Tierlog wordmark with a stacked card mark.</desc>
-  <g transform="translate(24 18) scale(0.16)" stroke="#ffffff" stroke-width="44" stroke-linejoin="round">
-    <path fill="#6366f1" d="M536 532 L806 667 Q834 680 806 693 L536 828 Q512 840 488 828 L218 693 Q190 680 218 667 L488 532 Q512 520 536 532 Z"/>
-    <path fill="#0f172a" d="M536 352 L806 487 Q834 500 806 513 L536 648 Q512 660 488 648 L218 513 Q190 500 218 487 L488 352 Q512 340 536 352 Z"/>
-    <path fill="#6366f1" d="M536 172 L806 307 Q834 320 806 333 L536 468 Q512 480 488 468 L218 333 Q190 320 218 307 L488 172 Q512 160 536 172 Z"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="1520" height="400" viewBox="0 0 760 200" role="img" aria-labelledby="title desc">
+  <title id="title">Tierlog A3 v2 logo</title>
+  <desc id="desc">An energetic Tierlog wordmark with a bold A3-style stacked card mark.</desc>
+  <defs>
+    <linearGradient id="tierlog-logo-a3-v2-teal" x1="76" y1="126" x2="252" y2="372" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3fe6d2"/>
+      <stop offset="1" stop-color="#0c7fa5"/>
+    </linearGradient>
+    <linearGradient id="tierlog-logo-a3-v2-blue" x1="126" y1="98" x2="300" y2="354" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2f7cff"/>
+      <stop offset="1" stop-color="#143aa3"/>
+    </linearGradient>
+    <linearGradient id="tierlog-logo-a3-v2-violet" x1="228" y1="112" x2="382" y2="360" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7a6cff"/>
+      <stop offset="1" stop-color="#3a2a90"/>
+    </linearGradient>
+    <linearGradient id="tierlog-logo-a3-v2-front" x1="180" y1="86" x2="350" y2="364" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#102958"/>
+      <stop offset="0.56" stop-color="#0b1b40"/>
+      <stop offset="1" stop-color="#06112d"/>
+    </linearGradient>
+    <linearGradient id="tierlog-logo-a3-v2-lines" x1="214" y1="268" x2="308" y2="330" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#3fe6d2"/>
+      <stop offset="0.5" stop-color="#38bdf8"/>
+      <stop offset="1" stop-color="#6d5dfc"/>
+    </linearGradient>
+    <linearGradient id="tierlog-logo-a3-v2-word" x1="178" y1="52" x2="572" y2="138" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#06112d"/>
+      <stop offset="0.58" stop-color="#071735"/>
+      <stop offset="0.78" stop-color="#1d4ed8"/>
+      <stop offset="1" stop-color="#2563eb"/>
+    </linearGradient>
+    <filter id="tierlog-logo-a3-v2-shadow" x="-20%" y="-20%" width="140%" height="150%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="6" stdDeviation="6" flood-color="#020617" flood-opacity="0.15"/>
+    </filter>
+    <filter id="tierlog-logo-a3-v2-word-shadow" x="-4%" y="-10%" width="108%" height="130%" color-interpolation-filters="sRGB">
+      <feDropShadow dx="0" dy="4" stdDeviation="2" flood-color="#0f172a" flood-opacity="0.13"/>
+    </filter>
+  </defs>
+  <g transform="translate(5 11) scale(0.36)" filter="url(#tierlog-logo-a3-v2-shadow)">
+    <rect x="90" y="139" width="156" height="238" rx="25" fill="url(#tierlog-logo-a3-v2-teal)" stroke="#fbfdff" stroke-width="9" transform="rotate(-15 168 258)"/>
+    <rect x="135" y="112" width="158" height="247" rx="25" fill="url(#tierlog-logo-a3-v2-blue)" stroke="#fbfdff" stroke-width="9" transform="rotate(-7 214 236)"/>
+    <rect x="223" y="122" width="158" height="247" rx="25" fill="url(#tierlog-logo-a3-v2-violet)" stroke="#fbfdff" stroke-width="9" transform="rotate(9 302 246)"/>
+    <g transform="rotate(4 262 228)">
+      <rect x="171" y="88" width="184" height="274" rx="27" fill="url(#tierlog-logo-a3-v2-front)" stroke="#fbfdff" stroke-width="9"/>
+      <path fill="#ffffff" d="M214 187l25 23 23-51 24 51 26-23-11 71h-76l-11-71z"/>
+      <rect x="228" y="269" width="70" height="10" rx="5" fill="#f8fbff" opacity="0.96"/>
+      <rect x="215" y="299" width="96" height="11" rx="5.5" fill="url(#tierlog-logo-a3-v2-lines)"/>
+      <rect x="224" y="329" width="78" height="11" rx="5.5" fill="url(#tierlog-logo-a3-v2-lines)" opacity="0.9"/>
+      <rect x="236" y="359" width="55" height="11" rx="5.5" fill="url(#tierlog-logo-a3-v2-lines)" opacity="0.78"/>
+      <path fill="#ffffff" opacity="0.06" d="M180 99h166v58L180 251V99z"/>
+    </g>
   </g>
-  <text x="210" y="122" fill="#0f172a" font-family="Geist, Inter, Arial, sans-serif" font-size="82" font-weight="800" letter-spacing="0">Tierlog</text>
+  <g filter="url(#tierlog-logo-a3-v2-word-shadow)">
+    <text x="170" y="127" fill="url(#tierlog-logo-a3-v2-word)" font-family="Geist, Inter, Arial, Helvetica, sans-serif" font-size="88" font-weight="900" letter-spacing="0">Tierlog</text>
+  </g>
 </svg>
