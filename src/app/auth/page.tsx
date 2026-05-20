@@ -129,8 +129,8 @@ export default function AuthPage() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <TierlogLogo className="mx-auto h-10 w-auto text-foreground" />
-          <p className="text-[13px] text-muted-foreground mt-2">
+          <TierlogLogo className="mx-auto h-14 sm:h-16 w-auto text-foreground" />
+          <p className="text-[13px] text-muted-foreground mt-3">
             対戦記録・環境分析ツール
           </p>
         </div>
