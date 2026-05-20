@@ -10,6 +10,8 @@ type Props = {
 // カードファン型マークは v2 のグラデーション / 影を忠実再現する。
 // wordmark は currentColor で親の text 色に追従する（ダーク=明色 / ライト=濃色）。
 // <svg> には width/height 属性を付けず viewBox のみ。サイズは呼び出し側 className（h-* + w-auto）で指定する。
+// viewBox 0 0 501 200 は実描画範囲（マーク左端〜Geist 900 wordmark 右端）にタイトに合わせている。
+// 右側に余白を残すと mx-auto 中央寄せ時にロゴが左へ寄って見えるため。
 export function TierlogLogo({ className, title = "Tierlog" }: Props) {
   // useId() は ":" 等の記号を含み得るため、url(#...) 参照で安全なよう英数字のみへ正規化する。
   const uid = useId().replace(/[^a-zA-Z0-9]/g, "");
@@ -18,7 +20,7 @@ export function TierlogLogo({ className, title = "Tierlog" }: Props) {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 760 200"
+      viewBox="0 0 501 200"
       role="img"
       aria-labelledby={id("title")}
       preserveAspectRatio="xMidYMid meet"
