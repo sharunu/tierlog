@@ -512,13 +512,44 @@ export function OpponentDeckManager({
       const denominator = totalBattles + totalBonus;
 
       // 3. Recalculate usage_rate and category client-side
-      const updated = statsDecks.map((d) => {
-        if (!d.is_active || denominator === 0) return d;
-        const bc = battleCounts[d.name] ?? 0;
-        const rate = ((bc + (d.admin_bonus_count ?? 0)) * 100) / denominator;
-        const cat = rate >= majorThreshold ? "major" : rate >= minorThreshold ? "minor" : "other";
-        return { ...d, battle_count: bc, usage_rate: rate, category: cat };
-      });
+      let updated: DeckWithStats[];
+      if (classificationMethod === "fixed_count") {
+        // デッキ数固定方式: 使用数 (battle_count + admin_bonus_count) 上位から固定件数で分類。
+        // 使用数 0 のデッキは other 固定。denominator には依存しない (DB 側ロジックと同じ挙動)。
+        const majorFixed = Math.max(0, parseInt(majorFixedCountStr, 10) || 0);
+        const minorFixed = Math.max(0, parseInt(minorFixedCountStr, 10) || 0);
+        const withUsage = statsDecks.map((d) => {
+          const bc = battleCounts[d.name] ?? 0;
+          const rate = denominator > 0 ? ((bc + (d.admin_bonus_count ?? 0)) * 100) / denominator : 0;
+          return { ...d, battle_count: bc, usage_rate: rate };
+        });
+        const ranked = withUsage
+          .filter((d) => d.is_active && !deletedDeckIdsRef.current.has(d.id))
+          .filter((d) => d.battle_count + (d.admin_bonus_count ?? 0) > 0)
+          .sort((a, b) => {
+            const ta = a.battle_count + (a.admin_bonus_count ?? 0);
+            const tb = b.battle_count + (b.admin_bonus_count ?? 0);
+            if (tb !== ta) return tb - ta;
+            return a.name.localeCompare(b.name);
+          });
+        const catById = new Map<string, string>();
+        ranked.forEach((d, i) => {
+          catById.set(d.id, i < majorFixed ? "major" : i < majorFixed + minorFixed ? "minor" : "other");
+        });
+        // 有効デッキ: ランク済はその category、使用数 0 (catById に無し) は other。無効デッキは現状維持。
+        updated = withUsage.map((d) =>
+          d.is_active ? { ...d, category: catById.get(d.id) ?? "other" } : d
+        );
+      } else {
+        // 閾値方式: 使用率と閾値で分類
+        updated = statsDecks.map((d) => {
+          if (!d.is_active || denominator === 0) return d;
+          const bc = battleCounts[d.name] ?? 0;
+          const rate = ((bc + (d.admin_bonus_count ?? 0)) * 100) / denominator;
+          const cat = rate >= majorThreshold ? "major" : rate >= minorThreshold ? "minor" : "other";
+          return { ...d, battle_count: bc, usage_rate: rate, category: cat };
+        });
+      }
 
       // 4. Sort: major -> minor -> other, within each by rate desc then name asc
       updated.sort((a, b) => {
@@ -764,13 +795,14 @@ export function OpponentDeckManager({
             <p className="text-foreground font-medium mb-1">■ 完全管理者依存</p>
             <ul className="space-y-0.5 list-disc list-inside">
               <li>カテゴリ(major/minor/other)と並び順は手動で管理します</li>
-              <li>対戦記録で未登録デッキが使われた場合、無効状態で自動追加されます</li>
+              <li>対戦記録で未登録デッキが使われた場合、other・有効状態で自動追加されます</li>
             </ul>
           </div>
           <div>
             <p className="text-foreground font-medium mb-1">■ ユーザー入力依存</p>
             <ul className="space-y-0.5 list-disc list-inside">
-              <li>カテゴリと並び順は使用率に基づいて自動計算されます</li>
+              <li>分類方式は「閾値方式」(使用率で判定) と「デッキ数固定方式」(使用数上位から固定件数で判定) を選択できます</li>
+              <li>カテゴリと並び順は対戦記録に基づいて自動計算されます</li>
               <li>「試し計算」で設定値での計算結果をプレビューできます</li>
               <li>対戦記録で未登録デッキが使われた場合、有効状態で自動追加されます</li>
               <li>無効デッキが再使用されると自動的に有効に戻ります</li>
@@ -962,21 +994,75 @@ export function OpponentDeckManager({
           {/* Settings */}
           <div className="bg-surface-2 rounded-[10px] px-4 py-4 space-y-3">
             <p className="text-[13px] font-medium text-muted-foreground">設定</p>
+            {/* 分類方式 */}
+            <div className="flex gap-2">
+              <label className={`flex-1 flex items-center gap-2 cursor-pointer rounded-[6px] px-3 py-2 text-[13px] border ${
+                classificationMethod === "threshold"
+                  ? "border-primary bg-primary/12"
+                  : "border-transparent bg-surface-1"
+              }`}>
+                <input
+                  type="radio"
+                  name="autoClassificationMethod"
+                  value="threshold"
+                  checked={classificationMethod === "threshold"}
+                  onChange={() => { setClassificationMethod("threshold"); setDirty(true); }}
+                  className="accent-primary-soft"
+                />
+                閾値方式
+              </label>
+              <label className={`flex-1 flex items-center gap-2 cursor-pointer rounded-[6px] px-3 py-2 text-[13px] border ${
+                classificationMethod === "fixed_count"
+                  ? "border-primary bg-primary/12"
+                  : "border-transparent bg-surface-1"
+              }`}>
+                <input
+                  type="radio"
+                  name="autoClassificationMethod"
+                  value="fixed_count"
+                  checked={classificationMethod === "fixed_count"}
+                  onChange={() => { setClassificationMethod("fixed_count"); setDirty(true); }}
+                  className="accent-primary-soft"
+                />
+                デッキ数固定方式
+              </label>
+            </div>
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-[12px] text-muted-foreground block mb-1">major閾値 (%)</label>
-                <input type="text" inputMode="decimal" value={majorThresholdStr}
-                  onChange={(e) => { setMajorThresholdStr(e.target.value); setDirty(true); }}
-                  className="w-full bg-surface-1 rounded-[6px] px-3 py-2 text-[14px] focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
-              <div>
-                <label className="text-[12px] text-muted-foreground block mb-1">minor閾値 (%)</label>
-                <input type="text" inputMode="decimal" value={minorThresholdStr}
-                  onChange={(e) => { setMinorThresholdStr(e.target.value); setDirty(true); }}
-                  className="w-full bg-surface-1 rounded-[6px] px-3 py-2 text-[14px] focus:outline-none focus:ring-1 focus:ring-primary"
-                />
-              </div>
+              {classificationMethod === "threshold" ? (
+                <>
+                  <div>
+                    <label className="text-[12px] text-muted-foreground block mb-1">major閾値 (%)</label>
+                    <input type="text" inputMode="decimal" value={majorThresholdStr}
+                      onChange={(e) => { setMajorThresholdStr(e.target.value); setDirty(true); }}
+                      className="w-full bg-surface-1 rounded-[6px] px-3 py-2 text-[14px] focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[12px] text-muted-foreground block mb-1">minor閾値 (%)</label>
+                    <input type="text" inputMode="decimal" value={minorThresholdStr}
+                      onChange={(e) => { setMinorThresholdStr(e.target.value); setDirty(true); }}
+                      className="w-full bg-surface-1 rounded-[6px] px-3 py-2 text-[14px] focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div>
+                    <label className="text-[12px] text-muted-foreground block mb-1">major デッキ数</label>
+                    <input type="text" inputMode="numeric" value={majorFixedCountStr}
+                      onChange={(e) => { setMajorFixedCountStr(e.target.value); setDirty(true); }}
+                      className="w-full bg-surface-1 rounded-[6px] px-3 py-2 text-[14px] focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[12px] text-muted-foreground block mb-1">minor デッキ数</label>
+                    <input type="text" inputMode="numeric" value={minorFixedCountStr}
+                      onChange={(e) => { setMinorFixedCountStr(e.target.value); setDirty(true); }}
+                      className="w-full bg-surface-1 rounded-[6px] px-3 py-2 text-[14px] focus:outline-none focus:ring-1 focus:ring-primary"
+                    />
+                  </div>
+                </>
+              )}
               <div>
                 <label className="text-[12px] text-muted-foreground block mb-1">算出期間 (日)</label>
                 <input type="text" inputMode="numeric" value={usagePeriodStr}

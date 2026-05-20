@@ -1,0 +1,1028 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tierlog 対面デッキリスト更新フロー 管理者向けガイド</title>
+<style>
+  :root {
+    --bg: #10131a;
+    --panel: #171c26;
+    --panel-2: #1f2633;
+    --panel-3: #283243;
+    --line: #3b4658;
+    --text: #eef2f7;
+    --muted: #aab4c3;
+    --muted-2: #7f8da1;
+    --blue: #58bdf6;
+    --green: #55d08c;
+    --orange: #ffb35c;
+    --pink: #ee7eb0;
+    --purple: #b99cff;
+    --red: #ff7373;
+    --yellow: #f4d35e;
+    --code: #0b0f16;
+    --shadow: 0 16px 44px rgba(0, 0, 0, 0.28);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background:
+      linear-gradient(180deg, rgba(88, 189, 246, 0.12), transparent 360px),
+      var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Yu Gothic UI", "Noto Sans JP", sans-serif;
+    line-height: 1.75;
+  }
+
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code {
+    background: var(--code);
+    color: #ffe8a3;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 5px;
+    padding: 1px 6px;
+    font-family: Menlo, Monaco, Consolas, monospace;
+    font-size: 0.92em;
+    white-space: nowrap;
+  }
+
+  .wrap {
+    width: min(1180px, calc(100% - 32px));
+    margin: 0 auto;
+    padding: 32px 0 72px;
+  }
+
+  header {
+    padding: 32px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background:
+      radial-gradient(circle at 12% 20%, rgba(85, 208, 140, 0.16), transparent 30%),
+      radial-gradient(circle at 80% 0%, rgba(238, 126, 176, 0.14), transparent 34%),
+      linear-gradient(145deg, #1d2635, #141922);
+    box-shadow: var(--shadow);
+  }
+
+  header .eyebrow {
+    margin: 0 0 8px;
+    color: var(--green);
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    font-size: 13px;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(28px, 4vw, 42px);
+    line-height: 1.2;
+    letter-spacing: 0;
+  }
+
+  .lead {
+    max-width: 860px;
+    margin: 16px 0 0;
+    color: var(--muted);
+    font-size: 15px;
+  }
+
+  .meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 20px;
+  }
+
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    padding: 5px 10px;
+    color: var(--muted);
+    background: rgba(255, 255, 255, 0.04);
+    font-size: 12px;
+  }
+
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 5;
+    margin: 18px 0 28px;
+    border: 1px solid rgba(59, 70, 88, 0.9);
+    border-radius: 12px;
+    background: rgba(23, 28, 38, 0.9);
+    backdrop-filter: blur(14px);
+    overflow: hidden;
+  }
+
+  nav .links {
+    display: flex;
+    gap: 2px;
+    overflow-x: auto;
+    padding: 8px;
+  }
+
+  nav a {
+    flex: 0 0 auto;
+    color: var(--text);
+    border-radius: 8px;
+    padding: 8px 11px;
+    font-size: 13px;
+  }
+
+  nav a:hover {
+    background: var(--panel-3);
+    text-decoration: none;
+  }
+
+  section {
+    margin-top: 34px;
+    scroll-margin-top: 80px;
+  }
+
+  h2 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 14px;
+    font-size: 23px;
+    letter-spacing: 0;
+  }
+
+  h2::before {
+    content: "";
+    width: 8px;
+    height: 24px;
+    border-radius: 99px;
+    background: var(--blue);
+  }
+
+  h3 {
+    margin: 22px 0 10px;
+    font-size: 16px;
+    color: var(--text);
+  }
+
+  p { margin: 10px 0; }
+  ul { margin: 8px 0 0; padding-left: 20px; }
+  li { margin: 4px 0; }
+
+  .grid {
+    display: grid;
+    gap: 14px;
+  }
+  .grid.cols-2 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .grid.cols-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .grid.cols-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+  .card {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    background: var(--panel);
+    padding: 18px;
+    box-shadow: 0 12px 28px rgba(0, 0, 0, 0.16);
+  }
+
+  .card.soft { background: var(--panel-2); }
+  .card h3:first-child,
+  .card h4:first-child { margin-top: 0; }
+
+  .mini-title {
+    margin: 0 0 7px;
+    color: var(--muted);
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .big {
+    margin: 0 0 10px;
+    font-size: 19px;
+    font-weight: 700;
+  }
+
+  .note {
+    border-left: 4px solid var(--blue);
+    border-radius: 9px;
+    background: rgba(88, 189, 246, 0.09);
+    padding: 13px 15px;
+    color: var(--muted);
+  }
+
+  .note.warn {
+    border-left-color: var(--orange);
+    background: rgba(255, 179, 92, 0.10);
+  }
+
+  .note.danger {
+    border-left-color: var(--red);
+    background: rgba(255, 115, 115, 0.10);
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 7px;
+    padding: 2px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.05);
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .tag.major { color: #d9f6ff; border-color: rgba(88, 189, 246, 0.45); background: rgba(88, 189, 246, 0.16); }
+  .tag.minor { color: #fff1ca; border-color: rgba(244, 211, 94, 0.42); background: rgba(244, 211, 94, 0.13); }
+  .tag.other { color: #e8defd; border-color: rgba(185, 156, 255, 0.40); background: rgba(185, 156, 255, 0.13); }
+  .tag.active { color: #d9ffe8; border-color: rgba(85, 208, 140, 0.45); background: rgba(85, 208, 140, 0.14); }
+  .tag.inactive { color: #ffcaca; border-color: rgba(255, 115, 115, 0.40); background: rgba(255, 115, 115, 0.13); }
+
+  .flow {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 10px;
+    align-items: stretch;
+    margin: 16px 0;
+  }
+
+  .step {
+    position: relative;
+    min-height: 118px;
+    border: 1px solid var(--line);
+    border-radius: 11px;
+    background: var(--panel-2);
+    padding: 13px;
+  }
+
+  .step::after {
+    content: "→";
+    position: absolute;
+    right: -14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--muted-2);
+    font-weight: 700;
+  }
+
+  .step:last-child::after { content: ""; }
+  .step .num {
+    display: inline-grid;
+    place-items: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: rgba(88, 189, 246, 0.17);
+    color: var(--blue);
+    font-size: 12px;
+    font-weight: 700;
+  }
+
+  .step .label {
+    margin: 9px 0 3px;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+
+  .step .desc {
+    margin: 0;
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.55;
+  }
+
+  .mode-admin .step .num { background: rgba(238, 126, 176, 0.17); color: var(--pink); }
+  .mode-auto .step .num { background: rgba(85, 208, 140, 0.17); color: var(--green); }
+  .mode-limitless .step .num { background: rgba(255, 179, 92, 0.17); color: var(--orange); }
+
+  .lane {
+    border: 1px solid var(--line);
+    border-radius: 13px;
+    overflow: hidden;
+    background: var(--panel);
+    margin: 16px 0;
+  }
+
+  .lane-head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 8px;
+    border-bottom: 1px solid var(--line);
+    padding: 14px 16px;
+    background: var(--panel-2);
+  }
+
+  .lane-head strong { font-size: 17px; }
+  .lane-body { padding: 16px; }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 12px 0;
+    font-size: 13px;
+  }
+
+  th, td {
+    border-bottom: 1px solid var(--line);
+    padding: 10px 9px;
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    background: var(--panel-2);
+    color: var(--muted);
+    font-weight: 700;
+  }
+
+  tr:last-child td { border-bottom: 0; }
+
+  .matrix th:first-child,
+  .matrix td:first-child {
+    width: 170px;
+    color: var(--text);
+    font-weight: 700;
+  }
+
+  .db-box {
+    display: grid;
+    gap: 10px;
+  }
+
+  .db-row {
+    display: grid;
+    grid-template-columns: 190px 1fr;
+    gap: 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--panel-2);
+    padding: 11px;
+  }
+
+  .db-row strong {
+    color: var(--blue);
+    font-family: Menlo, Monaco, Consolas, monospace;
+    font-size: 13px;
+  }
+
+  .db-row span {
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  .route-map {
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 14px;
+  }
+
+  .route {
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 13px;
+    background: var(--panel-2);
+  }
+
+  .route + .route { margin-top: 10px; }
+  .route b { color: var(--text); }
+  .route p { margin: 6px 0 0; color: var(--muted); font-size: 13px; }
+
+  .status-diagram {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  .switch-card {
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 16px;
+    background: var(--panel);
+  }
+
+  .switch-line {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 10px;
+    align-items: center;
+    margin: 10px 0;
+  }
+
+  .state {
+    border-radius: 9px;
+    padding: 10px;
+    text-align: center;
+    font-weight: 700;
+    background: var(--panel-2);
+    border: 1px solid var(--line);
+  }
+
+  .state.on { color: var(--green); }
+  .state.off { color: var(--red); }
+  .arrow { color: var(--muted-2); font-weight: 800; }
+
+  .small {
+    color: var(--muted);
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .source-list {
+    columns: 2;
+    column-gap: 26px;
+    margin-top: 12px;
+  }
+
+  .source-list li { break-inside: avoid; }
+
+  @media (max-width: 960px) {
+    .grid.cols-3, .grid.cols-4, .flow, .route-map, .status-diagram {
+      grid-template-columns: 1fr;
+    }
+    .step::after {
+      content: "↓";
+      right: 50%;
+      top: auto;
+      bottom: -22px;
+      transform: translateX(50%);
+    }
+    .step { min-height: auto; }
+    .db-row { grid-template-columns: 1fr; }
+    .source-list { columns: 1; }
+  }
+
+  @media print {
+    body { background: #fff; color: #111827; }
+    header, .card, .lane, .step, .route, .switch-card, nav {
+      box-shadow: none;
+      background: #fff;
+      color: #111827;
+      border-color: #d1d5db;
+    }
+    nav { position: static; }
+    code { color: #111827; background: #f3f4f6; }
+    .muted, .small, .lead, .note, .route p, .step .desc { color: #374151; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <p class="eyebrow">ADMIN GUIDE</p>
+    <h1>対面デッキリストのDB更新フロー</h1>
+    <p class="lead">
+      この資料は、Tierlog の「対面デッキリスト」がどこから更新され、どの条件で
+      <code>有効/無効</code>、<code>major/minor/other</code>、追加、削除が起きるかを管理者向けに整理したものです。
+      対象DBは主に <code>opponent_deck_master</code> と <code>opponent_deck_settings</code> です。
+    </p>
+    <div class="meta">
+      <span class="pill">作成日: 2026-05-20</span>
+      <span class="pill">対象: dev ブランチ現行コード</span>
+      <span class="pill">注意: Limitless HTML 取得は現状停止中</span>
+    </div>
+  </header>
+
+  <nav aria-label="目次">
+    <div class="links">
+      <a href="#summary">全体像</a>
+      <a href="#tables">DBの役割</a>
+      <a href="#admin">完全管理者依存</a>
+      <a href="#auto">ユーザー入力依存</a>
+      <a href="#limitless">LimitlessTCG依存</a>
+      <a href="#switches">切り替わる条件</a>
+      <a href="#add-delete">追加と削除</a>
+      <a href="#routes">更新ルート一覧</a>
+      <a href="#sources">確認したコード</a>
+    </div>
+  </nav>
+
+  <section id="summary">
+    <h2>全体像</h2>
+    <div class="grid cols-3">
+      <div class="card">
+        <p class="mini-title">Mode 1</p>
+        <p class="big">完全管理者依存</p>
+        <p>
+          管理者が <code>/admin/opponent-decks</code> でカテゴリ、表示順、有効状態、追加、削除を直接管理します。
+          ユーザーが未登録の対面名を入力した場合は、DBトリガーで「無効」の候補として自動追加されます。
+        </p>
+        <div class="legend">
+          <span class="tag major">major 手動</span>
+          <span class="tag minor">minor 手動</span>
+          <span class="tag other">other 手動</span>
+          <span class="tag active">有効 手動</span>
+        </div>
+      </div>
+      <div class="card">
+        <p class="mini-title">Mode 2</p>
+        <p class="big">ユーザー入力依存</p>
+        <p>
+          ユーザーの対戦記録 <code>battles</code> を集計し、使用率でカテゴリと表示順を再計算します。
+          未登録デッキは対戦記録のINSERT後に自動追加され、このモードでは有効になります。
+        </p>
+        <div class="legend">
+          <span class="tag major">major 使用率</span>
+          <span class="tag minor">minor 使用率</span>
+          <span class="tag other">other 使用率</span>
+          <span class="tag inactive">古い候補は無効化</span>
+        </div>
+      </div>
+      <div class="card">
+        <p class="mini-title">Mode 3</p>
+        <p class="big">LimitlessTCG依存</p>
+        <p>
+          ポケポケのみ。LimitlessTCG のデッキ一覧を取り込み、<code>RANKED</code> と <code>RANDOM</code> に同じスナップショットを適用します。
+          現状はAPIキー待ちのためHTML取得が停止され、既存キャッシュ表示のみです。
+        </p>
+        <div class="legend">
+          <span class="tag major">major share/順位</span>
+          <span class="tag minor">minor share/順位</span>
+          <span class="tag active">今回取得あり</span>
+          <span class="tag inactive">今回取得なし</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="note warn">
+      重要: 管理画面では多くの操作が画面上の一時状態に積まれます。
+      DBに反映されるのは、基本的に右上の <strong>「変更内容反映」</strong> を押したタイミングです。
+      ただし Limitless の和名編集だけは、入力欄のフォーカスアウト時に専用RPCで即時保存されます。
+    </div>
+  </section>
+
+  <section id="tables">
+    <h2>DBの役割</h2>
+    <div class="route-map">
+      <div class="card">
+        <p class="big"><code>opponent_deck_master</code></p>
+        <p>対面デッキリスト本体です。ユーザー画面の候補、統計画面の major/minor/other 集約、管理画面の一覧がここを参照します。</p>
+        <div class="db-box">
+          <div class="db-row"><strong>name</strong><span>アプリ内の正式名。現在は空白なしに正規化されます。</span></div>
+          <div class="db-row"><strong>game_title / format</strong><span>ゲームとフォーマットのスコープ。例: <code>dm/ND</code>, <code>pokepoke/RANKED</code></span></div>
+          <div class="db-row"><strong>is_active</strong><span>ユーザー候補に出すかどうか。無効でも過去戦績は消えません。</span></div>
+          <div class="db-row"><strong>category</strong><span><code>major</code>, <code>minor</code>, <code>other</code>。候補表示と統計の集約に使います。</span></div>
+          <div class="db-row"><strong>sort_order</strong><span>候補表示順。管理者手動、使用率計算、Limitless share順で更新されます。</span></div>
+          <div class="db-row"><strong>last_used_at</strong><span>ユーザーが対戦記録に入力した最終時刻。autoモードの無効化判定に使います。</span></div>
+          <div class="db-row"><strong>admin_bonus_count</strong><span>autoモードの使用率計算で、管理者が任意に加算できる仮想対戦数です。</span></div>
+          <div class="db-row"><strong>source</strong><span><code>manual</code> または <code>limitless</code> が実運用上の主な値です。未登録入力からの自動追加も現状はデフォルトで <code>manual</code> になります。</span></div>
+        </div>
+      </div>
+      <div class="card">
+        <p class="big"><code>opponent_deck_settings</code></p>
+        <p>ゲーム/フォーマットごとの管理方式と自動分類ルールを持ちます。</p>
+        <div class="db-box">
+          <div class="db-row"><strong>management_mode</strong><span><code>admin</code>, <code>auto</code>, <code>limitless</code></span></div>
+          <div class="db-row"><strong>major_threshold</strong><span>auto/Limitlessの閾値方式で major になる使用率またはshare。</span></div>
+          <div class="db-row"><strong>minor_threshold</strong><span>auto/Limitlessの閾値方式で minor になる使用率またはshare。</span></div>
+          <div class="db-row"><strong>usage_period_days</strong><span>autoモードで集計対象にする直近日数。</span></div>
+          <div class="db-row"><strong>disable_period_days</strong><span>autoモードで未使用候補を無効化する日数。</span></div>
+          <div class="db-row"><strong>classification_method</strong><span>Limitless用。<code>threshold</code> または <code>fixed_count</code>。</span></div>
+          <div class="db-row"><strong>major_fixed_count / minor_fixed_count</strong><span>Limitless固定件数方式で、上位何件を major/minor にするか。</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="admin">
+    <h2>完全管理者依存</h2>
+    <div class="lane mode-admin">
+      <div class="lane-head">
+        <strong>管理者が直接決めるモード</strong>
+        <span class="tag">management_mode = admin</span>
+      </div>
+      <div class="lane-body">
+        <div class="flow">
+          <div class="step">
+            <span class="num">1</span>
+            <p class="label">管理画面を開く</p>
+            <p class="desc"><code>/admin/opponent-decks?game=...&amp;format=...</code></p>
+          </div>
+          <div class="step">
+            <span class="num">2</span>
+            <p class="label">画面上で編集</p>
+            <p class="desc">追加、名前変更、有効切替、カテゴリ切替、削除、ドラッグ並び替え。</p>
+          </div>
+          <div class="step">
+            <span class="num">3</span>
+            <p class="label">変更内容反映</p>
+            <p class="desc">このタイミングで settings と master の差分をDBに保存。</p>
+          </div>
+          <div class="step">
+            <span class="num">4</span>
+            <p class="label">Supabase更新</p>
+            <p class="desc"><code>insert/update/delete</code> と <code>sort_order</code> 更新。</p>
+          </div>
+          <div class="step">
+            <span class="num">5</span>
+            <p class="label">ユーザー画面へ反映</p>
+            <p class="desc">次回読み込み時に有効候補だけが major/minor/other 別に表示。</p>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr><th>項目</th><th>どう更新されるか</th><th>DB更新ルート</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>有効/無効</td>
+              <td>管理者がボタンで切り替えます。</td>
+              <td><code>updateOpponentDeck(id, { is_active })</code></td>
+            </tr>
+            <tr>
+              <td>major/minor/other</td>
+              <td>管理者がカテゴリボタンで <code>major → minor → other → major</code> と切り替えます。追加時も初期カテゴリを選べます。</td>
+              <td><code>updateOpponentDeck(id, { category })</code></td>
+            </tr>
+            <tr>
+              <td>表示順</td>
+              <td>カテゴリ内でドラッグ並び替え。カテゴリごとに <code>sort_order</code> を振り直します。</td>
+              <td><code>reorderOpponentDecks(deckIds)</code></td>
+            </tr>
+            <tr>
+              <td>未登録名の入力</td>
+              <td>ユーザーが対戦記録で新しい対面名を入れると、トリガーが <code>is_active=false</code>, <code>category=other</code> で追加します。</td>
+              <td><code>battles AFTER INSERT</code> → <code>auto_add_opponent_deck</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="auto">
+    <h2>ユーザー入力依存</h2>
+    <div class="lane mode-auto">
+      <div class="lane-head">
+        <strong>ユーザーの対戦記録から自動計算するモード</strong>
+        <span class="tag">management_mode = auto</span>
+      </div>
+      <div class="lane-body">
+        <div class="flow">
+          <div class="step">
+            <span class="num">1</span>
+            <p class="label">ユーザーが対戦記録</p>
+            <p class="desc"><code>/dm/battle</code> または <code>/pokepoke/battle</code> で対面名を保存。</p>
+          </div>
+          <div class="step">
+            <span class="num">2</span>
+            <p class="label">battlesにINSERT</p>
+            <p class="desc"><code>recordBattle()</code> が空白を削除して <code>battles</code> に保存。</p>
+          </div>
+          <div class="step">
+            <span class="num">3</span>
+            <p class="label">DBトリガー</p>
+            <p class="desc">未登録なら master に有効候補として追加。既存なら <code>last_used_at</code> 更新。</p>
+          </div>
+          <div class="step">
+            <span class="num">4</span>
+            <p class="label">再計算</p>
+            <p class="desc">管理画面の反映時、または日次DB cronで使用率を集計。</p>
+          </div>
+          <div class="step">
+            <span class="num">5</span>
+            <p class="label">カテゴリ/順序/無効化</p>
+            <p class="desc">使用率で major/minor/other、古い候補は無効化。</p>
+          </div>
+        </div>
+
+        <h3>使用率計算の考え方</h3>
+        <div class="card soft">
+          <p>
+            集計対象は <code>usage_period_days</code> 日以内の <code>battles</code> です。
+            分母は <code>期間内の対戦数 + 有効デッキの admin_bonus_count 合計</code>。
+            各デッキの使用率は <code>(そのデッキの対戦数 + admin_bonus_count) / 分母 * 100</code> で計算されます。
+          </p>
+          <div class="legend">
+            <span class="tag major">使用率 >= major_threshold</span>
+            <span class="tag minor">使用率 >= minor_threshold</span>
+            <span class="tag other">それ未満</span>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr><th>項目</th><th>どう更新されるか</th><th>DB更新ルート</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>有効化</td>
+              <td>新規対面名が入力されると有効で追加。無効だった既存デッキが再使用されると有効に戻ります。</td>
+              <td><code>auto_add_opponent_deck</code></td>
+            </tr>
+            <tr>
+              <td>無効化</td>
+              <td><code>last_used_at</code> が <code>disable_period_days</code> より古い有効デッキ、または未使用で作成日が古い有効デッキを無効化します。</td>
+              <td><code>_recalculate_opponent_decks_internal</code></td>
+            </tr>
+            <tr>
+              <td>major/minor/other</td>
+              <td>使用率と閾値で自動更新。管理画面の「試し計算」はプレビューのみでDB更新しません。</td>
+              <td><code>recalculate_opponent_decks</code> または <code>run_daily_opponent_deck_batch</code></td>
+            </tr>
+            <tr>
+              <td>表示順</td>
+              <td>カテゴリ順、次に <code>対戦数 + admin_bonus_count</code> 降順、最後に名前順。</td>
+              <td><code>_recalculate_opponent_decks_internal</code></td>
+            </tr>
+          </tbody>
+        </table>
+
+        <div class="note">
+          日次再計算はDB側の <code>daily-opponent-deck-recalc</code> cron から
+          <code>run_daily_opponent_deck_batch()</code> を呼び、<code>dm/AD</code>, <code>dm/ND</code>,
+          <code>pokepoke/RANKED</code>, <code>pokepoke/RANDOM</code> を順に処理します。
+          <code>management_mode</code> が <code>auto</code> 以外のフォーマットは内部で何もせず終了します。
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="limitless">
+    <h2>LimitlessTCG依存</h2>
+    <div class="lane mode-limitless">
+      <div class="lane-head">
+        <strong>ポケポケのみの外部スナップショット同期</strong>
+        <span class="tag">management_mode = limitless</span>
+      </div>
+      <div class="lane-body">
+        <div class="note warn">
+          現在のコードでは <code>LIMITLESS_HTML_SYNC_PAUSED = true</code> です。
+          そのため、管理画面の「今すぐ取得」は無効、GitHub Actions や内部APIから呼んでも
+          <code>skipped</code> で終了し、新規取得・カテゴリ再計算は行われません。
+          以下は再開後に動く設計上のフローです。
+        </div>
+
+        <div class="flow">
+          <div class="step">
+            <span class="num">1</span>
+            <p class="label">同期を起動</p>
+            <p class="desc">管理APIまたはGitHub Actionsから内部APIをPOST。</p>
+          </div>
+          <div class="step">
+            <span class="num">2</span>
+            <p class="label">Limitless取得</p>
+            <p class="desc"><code>play.limitlesstcg.com/decks?game=POCKET&amp;format=standard</code></p>
+          </div>
+          <div class="step">
+            <span class="num">3</span>
+            <p class="label">HTML解析/翻訳</p>
+            <p class="desc">デッキ名、share、count、勝敗、slug、アイコンを抽出し和名を付与。</p>
+          </div>
+          <div class="step">
+            <span class="num">4</span>
+            <p class="label">RPC適用</p>
+            <p class="desc"><code>apply_limitless_snapshot</code> を <code>RANKED</code> と <code>RANDOM</code> に実行。</p>
+          </div>
+          <div class="step">
+            <span class="num">5</span>
+            <p class="label">master更新</p>
+            <p class="desc">新規追加、既存更新、未登場行の無効化、カテゴリ再計算、順序更新。</p>
+          </div>
+        </div>
+
+        <table>
+          <thead>
+            <tr><th>項目</th><th>どう更新されるか</th><th>DB更新ルート</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>追加</td>
+              <td>スナップショット内の slug または英名で既存行が見つからない場合、<code>source=limitless</code>, <code>is_active=true</code> で追加します。</td>
+              <td><code>apply_limitless_snapshot</code></td>
+            </tr>
+            <tr>
+              <td>有効化</td>
+              <td>今回のスナップショットに含まれた <code>source=limitless</code> 行は <code>is_active=true</code> に戻ります。</td>
+              <td><code>apply_limitless_snapshot</code></td>
+            </tr>
+            <tr>
+              <td>無効化</td>
+              <td>今回のスナップショットに含まれなかった既存 <code>source=limitless</code> 行は <code>is_active=false</code> になります。削除はしません。</td>
+              <td><code>apply_limitless_snapshot</code></td>
+            </tr>
+            <tr>
+              <td>major/minor/other</td>
+              <td>
+                閾値方式なら <code>limitless_share</code> が major/minor 閾値以上かで分類。
+                固定件数方式なら share降順の上位 <code>major_fixed_count</code> 件が major、次の <code>minor_fixed_count</code> 件が minor、それ以外が other。
+              </td>
+              <td><code>apply_limitless_snapshot</code></td>
+            </tr>
+            <tr>
+              <td>和名編集</td>
+              <td>管理画面で和名を編集すると、正式名 <code>name</code> も空白なし和名へ更新し、過去の <code>battles.opponent_deck_name</code> も旧名から新名へ同期します。</td>
+              <td><code>admin_update_opponent_deck_name_ja</code></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section id="switches">
+    <h2>切り替わる条件</h2>
+    <div class="status-diagram">
+      <div class="switch-card">
+        <p class="big">有効/無効</p>
+        <div class="switch-line">
+          <div class="state off">無効</div>
+          <div class="arrow">→</div>
+          <div class="state on">有効</div>
+        </div>
+        <ul>
+          <li>管理者が有効ボタンを押して <code>変更内容反映</code>。</li>
+          <li>autoモードで、その対面名が新規または再使用された。</li>
+          <li>Limitless同期で、今回のスナップショットに含まれた。</li>
+        </ul>
+        <div class="switch-line">
+          <div class="state on">有効</div>
+          <div class="arrow">→</div>
+          <div class="state off">無効</div>
+        </div>
+        <ul>
+          <li>管理者が無効ボタンを押して <code>変更内容反映</code>。</li>
+          <li>autoモードの再計算で、最終使用または作成から <code>disable_period_days</code> を超えた。</li>
+          <li>Limitless同期で、今回のスナップショットに含まれなかった。</li>
+        </ul>
+      </div>
+
+      <div class="switch-card">
+        <p class="big">major/minor/other</p>
+        <table class="matrix">
+          <thead>
+            <tr><th>モード</th><th>切り替えトリガー</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>完全管理者依存</td>
+              <td>管理者がカテゴリボタンで直接切替。追加時の初期カテゴリも管理者が選択。</td>
+            </tr>
+            <tr>
+              <td>ユーザー入力依存</td>
+              <td>再計算時に使用率が <code>major_threshold</code> 以上なら major、<code>minor_threshold</code> 以上なら minor、それ以外は other。</td>
+            </tr>
+            <tr>
+              <td>LimitlessTCG依存</td>
+              <td><code>classification_method</code> により、share閾値方式またはshare順位の固定件数方式で分類。</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <p class="big">候補として表示される条件</p>
+      <p>
+        ユーザーの対戦入力候補や統計画面のカテゴリ分けは、基本的に
+        <code>get_opponent_deck_suggestions(p_format)</code> が返す
+        <code>is_active = true</code> の master 行に依存します。
+        無効行や削除済み行は候補に出ません。ただし過去の <code>battles</code> は残るので、統計自体には名前が残り得ます。
+      </p>
+    </div>
+  </section>
+
+  <section id="add-delete">
+    <h2>追加と削除</h2>
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th>操作</th>
+          <th>完全管理者依存</th>
+          <th>ユーザー入力依存</th>
+          <th>LimitlessTCG依存</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>管理者による追加</td>
+          <td>追加フォームで名前とカテゴリを指定し、反映時に <code>opponent_deck_master</code> にINSERT。初期状態は有効。</td>
+          <td>追加フォーム自体は使えます。反映後に再計算が走るため、カテゴリは使用率で上書きされます。</td>
+          <td>Limitlessモードの画面には通常の追加フォームは出ません。</td>
+        </tr>
+        <tr>
+          <td>ユーザー入力による追加</td>
+          <td>未登録名が対戦記録に入ると <code>category=other</code>, <code>is_active=false</code> で自動追加。</td>
+          <td>未登録名が対戦記録に入ると <code>category=other</code>, <code>is_active=true</code> で自動追加。</td>
+          <td><code>management_mode</code> が auto ではないため、未登録名は無効の manual 行として追加されます。Limitless由来リストには混ざりません。</td>
+        </tr>
+        <tr>
+          <td>Limitlessによる追加</td>
+          <td>なし。</td>
+          <td>なし。</td>
+          <td>同期再開後、スナップショットに新しいslug/英名があれば <code>source=limitless</code> で追加。</td>
+        </tr>
+        <tr>
+          <td>管理者による削除</td>
+          <td>削除ボタン後、反映時に master 行をDELETE。</td>
+          <td>削除ボタン後、反映時に master 行をDELETE。</td>
+          <td>Limitlessモードの一覧では削除操作はありません。</td>
+        </tr>
+        <tr>
+          <td>自動削除</td>
+          <td>ありません。自動追加された無効候補も残ります。</td>
+          <td>ありません。古い候補は削除ではなく無効化です。</td>
+          <td>ありません。スナップショットから消えたデッキも削除ではなく無効化です。</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="note danger">
+      master行の削除は、過去の <code>battles</code> を削除しません。
+      つまり履歴・統計の名前は残りますが、候補リストやカテゴリマップからは外れます。
+      削除した名前が将来また対戦記録に入力されると、現在の管理モードに従って再追加されます。
+    </div>
+  </section>
+
+  <section id="routes">
+    <h2>更新ルート一覧</h2>
+    <div class="route-map">
+      <div class="card">
+        <p class="big">画面/APIルート</p>
+        <div class="route">
+          <b><code>/admin/opponent-decks</code></b>
+          <p>管理者用の対面デッキ管理画面。モード変更、閾値変更、追加、削除、有効切替、カテゴリ変更、Limitless和名編集を行います。</p>
+        </div>
+        <div class="route">
+          <b><code>/dm/battle</code> / <code>/pokepoke/battle</code></b>
+          <p>ユーザーの対戦記録入力画面。保存時に <code>battles</code> へINSERTし、DBトリガーで master の追加/last_used_at 更新が起きます。</p>
+        </div>
+        <div class="route">
+          <b><code>/api/admin/limitless-sync</code></b>
+          <p>管理者セッションのBearer JWTで呼ぶLimitless同期API。内部でservice role clientを使います。</p>
+        </div>
+        <div class="route">
+          <b><code>/api/internal/limitless-sync</code></b>
+          <p>GitHub Actionsなどの内部実行用。<code>X-Internal-Key</code> が必要です。</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <p class="big">DB関数/トリガー</p>
+        <div class="route">
+          <b><code>battles_auto_add_opponent_deck</code></b>
+          <p><code>battles</code> のAFTER INSERTトリガー。<code>auto_add_opponent_deck</code> を呼びます。</p>
+        </div>
+        <div class="route">
+          <b><code>auto_add_opponent_deck</code></b>
+          <p>対戦記録から master の存在確認、追加、<code>last_used_at</code> 更新、auto時の再有効化を担当。</p>
+        </div>
+        <div class="route">
+          <b><code>recalculate_opponent_decks</code></b>
+          <p>管理者がautoモードの反映時に呼ぶ公開RPC。admin判定後、内部再計算へ進みます。</p>
+        </div>
+        <div class="route">
+          <b><code>run_daily_opponent_deck_batch</code></b>
+          <p>日次cronから呼ばれるDB関数。全ゲーム/フォーマットのauto再計算を試みます。</p>
+        </div>
+        <div class="route">
+          <b><code>apply_limitless_snapshot</code></b>
+          <p>Limitless同期の本体。スナップショットを master に反映し、カテゴリと表示順も更新します。</p>
+        </div>
+        <div class="route">
+          <b><code>admin_update_opponent_deck_name_ja</code></b>
+          <p>Limitless由来デッキの和名編集用。master名と過去battle名を同じtransactionで同期します。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="sources">
+    <h2>確認したコード</h2>
+    <div class="card">
+      <p>このHTMLは次の実装を読んで作成しています。</p>
+      <ul class="source-list">
+        <li><code>src/components/admin/OpponentDeckManager.tsx</code></li>
+        <li><code>src/lib/actions/admin-actions.ts</code></li>
+        <li><code>src/lib/actions/battle-actions.ts</code></li>
+        <li><code>src/lib/pokepoke/limitless-sync.ts</code></li>
+        <li><code>src/lib/pokepoke/limitless-parser.ts</code></li>
+        <li><code>src/app/api/admin/limitless-sync/route.ts</code></li>
+        <li><code>src/app/api/internal/limitless-sync/route.ts</code></li>
+        <li><code>.github/workflows/limitless-sync.yml</code></li>
+        <li><code>supabase/migrations/20260411000002_dual_mode_management.sql</code></li>
+        <li><code>supabase/migrations/20260426005408_secdef_search_path.sql</code></li>
+        <li><code>supabase/migrations/20260513000002_auto_add_opponent_deck_trigger.sql</code></li>
+        <li><code>supabase/migrations/20260513000003_auto_add_opponent_deck_revoke.sql</code></li>
+        <li><code>supabase/migrations/20260421000001_limitless_sync.sql</code></li>
+        <li><code>supabase/migrations/20260519000002_canonicalize_opponent_deck_name.sql</code></li>
+        <li><code>supabase/migrations/20260519000003_admin_rpc_explicit_is_manual.sql</code></li>
+        <li><code>src/lib/supabase/database.types.ts</code></li>
+      </ul>
+    </div>
+  </section>
+</div>
+</body>
+</html>
