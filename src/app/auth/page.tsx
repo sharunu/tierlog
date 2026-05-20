@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { DEFAULT_GAME, isGameSlug, type GameSlug } from "@/lib/games";
+import { TierlogLogo } from "@/components/brand/TierlogLogo";
 
 function getRedirectGame(): GameSlug {
   if (typeof window === "undefined") return DEFAULT_GAME;
@@ -128,9 +129,7 @@ export default function AuthPage() {
     <div className="min-h-screen flex items-center justify-center px-4">
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
-          <h1 className="text-[24px] font-bold text-foreground">
-            Tierlog
-          </h1>
+          <TierlogLogo className="mx-auto h-10 w-auto text-foreground" />
           <p className="text-[13px] text-muted-foreground mt-2">
             対戦記録・環境分析ツール
           </p>
