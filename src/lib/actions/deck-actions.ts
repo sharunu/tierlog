@@ -11,7 +11,7 @@ export async function getDecks(format: string, game: GameSlug = DEFAULT_GAME) {
 
   const { data } = await supabase
     .from("decks")
-    .select("*, deck_tunings(id, name, sort_order)")
+    .select("*, deck_tunings(id, name, sort_order, is_archived)")
     .eq("user_id", user.id)
     .eq("is_archived", false)
     .eq("game_title", game)
@@ -21,7 +21,9 @@ export async function getDecks(format: string, game: GameSlug = DEFAULT_GAME) {
 
   return (data ?? []).map((d) => ({
     ...d,
-    deck_tunings: (d.deck_tunings ?? []).sort((a, b) => a.sort_order - b.sort_order),
+    deck_tunings: (d.deck_tunings ?? [])
+      .filter((t) => !t.is_archived)
+      .sort((a, b) => a.sort_order - b.sort_order),
   }));
 }
 
@@ -126,6 +128,7 @@ export async function createTuning(deckId: string, name: string) {
     .select("id")
     .eq("deck_id", deckId)
     .eq("name", name)
+    .eq("is_archived", false)
     .limit(1);
 
   if (dup && dup.length > 0) {
@@ -162,6 +165,7 @@ export async function updateTuning(id: string, name: string) {
     .eq("deck_id", current.deck_id)
     .eq("name", name)
     .neq("id", id)
+    .eq("is_archived", false)
     .limit(1);
 
   if (dup && dup.length > 0) {
@@ -173,10 +177,13 @@ export async function updateTuning(id: string, name: string) {
 }
 
 export async function deleteTuning(id: string) {
+  // 物理削除ではなく論理削除。物理 DELETE すると battles.tuning_id (FK ON DELETE
+  // SET NULL) が NULL 化され、battles UPDATE → normalize_battle_deck_names trigger
+  // 発火で過去戦績の my_deck_name / tuning_name スナップショットが破壊されるため。
   const supabase = createClient();
   const { error } = await supabase
     .from("deck_tunings")
-    .delete()
+    .update({ is_archived: true })
     .eq("id", id);
 
   if (error) throw new Error(error.message);

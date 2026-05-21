@@ -489,7 +489,8 @@
     </p>
     <div class="meta">
       <span class="pill">作成日: 2026-05-20</span>
-      <span class="pill">対象: dev ブランチ現行コード</span>
+      <span class="pill">更新日: 2026-05-21</span>
+      <span class="pill">対象: 本番反映済みコード</span>
       <span class="pill">注意: Limitless HTML 取得は現状停止中</span>
     </div>
   </header>
@@ -516,7 +517,7 @@
         <p class="big">完全管理者依存</p>
         <p>
           管理者が <code>/admin/opponent-decks</code> でカテゴリ、表示順、有効状態、追加、削除を直接管理します。
-          ユーザーが未登録の対面名を入力した場合は、DBトリガーで「無効」の候補として自動追加されます。
+          ユーザーが未登録の対面名を入力した場合は、DBトリガーで <code>other</code>・有効の候補として自動追加されます。
         </p>
         <div class="legend">
           <span class="tag major">major 手動</span>
@@ -529,13 +530,13 @@
         <p class="mini-title">Mode 2</p>
         <p class="big">ユーザー入力依存</p>
         <p>
-          ユーザーの対戦記録 <code>battles</code> を集計し、使用率でカテゴリと表示順を再計算します。
+          ユーザーの対戦記録 <code>battles</code> を集計し、閾値方式またはデッキ数固定方式でカテゴリと表示順を再計算します。
           未登録デッキは対戦記録のINSERT後に自動追加され、このモードでは有効になります。
         </p>
         <div class="legend">
-          <span class="tag major">major 使用率</span>
-          <span class="tag minor">minor 使用率</span>
-          <span class="tag other">other 使用率</span>
+          <span class="tag major">major 閾値/固定件数</span>
+          <span class="tag minor">minor 閾値/固定件数</span>
+          <span class="tag other">other 自動分類</span>
           <span class="tag inactive">古い候補は無効化</span>
         </div>
       </div>
@@ -560,6 +561,10 @@
       DBに反映されるのは、基本的に右上の <strong>「変更内容反映」</strong> を押したタイミングです。
       ただし Limitless の和名編集だけは、入力欄のフォーカスアウト時に専用RPCで即時保存されます。
     </div>
+    <div class="note">
+      対面デッキリストの自動追加・最終使用更新の対象は <code>battles.opponent_deck_name</code> です。
+      使用デッキ側の <code>my_deck_id</code> / <code>my_deck_name</code> は <code>decks</code> テーブルで別管理され、対面デッキリストの追加トリガーには使われません。
+    </div>
   </section>
 
   <section id="tables">
@@ -573,9 +578,9 @@
           <div class="db-row"><strong>game_title / format</strong><span>ゲームとフォーマットのスコープ。例: <code>dm/ND</code>, <code>pokepoke/RANKED</code></span></div>
           <div class="db-row"><strong>is_active</strong><span>ユーザー候補に出すかどうか。無効でも過去戦績は消えません。</span></div>
           <div class="db-row"><strong>category</strong><span><code>major</code>, <code>minor</code>, <code>other</code>。候補表示と統計の集約に使います。</span></div>
-          <div class="db-row"><strong>sort_order</strong><span>候補表示順。管理者手動、使用率計算、Limitless share順で更新されます。</span></div>
+          <div class="db-row"><strong>sort_order</strong><span>候補表示順。管理者手動、autoの自動計算、Limitless share順で更新されます。</span></div>
           <div class="db-row"><strong>last_used_at</strong><span>ユーザーが対戦記録に入力した最終時刻。autoモードの無効化判定に使います。</span></div>
-          <div class="db-row"><strong>admin_bonus_count</strong><span>autoモードの使用率計算で、管理者が任意に加算できる仮想対戦数です。</span></div>
+          <div class="db-row"><strong>admin_bonus_count</strong><span>autoモードの分類計算で、管理者が任意に加算できる仮想対戦数です。</span></div>
           <div class="db-row"><strong>source</strong><span><code>manual</code> または <code>limitless</code> が実運用上の主な値です。未登録入力からの自動追加も現状はデフォルトで <code>manual</code> になります。</span></div>
         </div>
       </div>
@@ -588,8 +593,8 @@
           <div class="db-row"><strong>minor_threshold</strong><span>auto/Limitlessの閾値方式で minor になる使用率またはshare。</span></div>
           <div class="db-row"><strong>usage_period_days</strong><span>autoモードで集計対象にする直近日数。</span></div>
           <div class="db-row"><strong>disable_period_days</strong><span>autoモードで未使用候補を無効化する日数。</span></div>
-          <div class="db-row"><strong>classification_method</strong><span>Limitless用。<code>threshold</code> または <code>fixed_count</code>。</span></div>
-          <div class="db-row"><strong>major_fixed_count / minor_fixed_count</strong><span>Limitless固定件数方式で、上位何件を major/minor にするか。</span></div>
+          <div class="db-row"><strong>classification_method</strong><span>auto/Limitlessで使う分類方式。<code>threshold</code> または <code>fixed_count</code>。</span></div>
+          <div class="db-row"><strong>major_fixed_count / minor_fixed_count</strong><span>固定件数方式で、上位何件を major/minor にするか。autoでは使用数、Limitlessではshare順位を使います。</span></div>
         </div>
       </div>
     </div>
@@ -653,7 +658,7 @@
             </tr>
             <tr>
               <td>未登録名の入力</td>
-              <td>ユーザーが対戦記録で新しい対面名を入れると、トリガーが <code>is_active=false</code>, <code>category=other</code> で追加します。</td>
+              <td>ユーザーが対戦記録で新しい対面名を入れると、トリガーが <code>is_active=true</code>, <code>category=other</code> で追加します。既に無効化されている同名デッキを再使用した場合は、有効状態を据え置きます。</td>
               <td><code>battles AFTER INSERT</code> → <code>auto_add_opponent_deck</code></td>
             </tr>
           </tbody>
@@ -689,27 +694,47 @@
           <div class="step">
             <span class="num">4</span>
             <p class="label">再計算</p>
-            <p class="desc">管理画面の反映時、または日次DB cronで使用率を集計。</p>
+            <p class="desc">管理画面の反映時、または日次DB cronで分類方式に応じて集計。</p>
           </div>
           <div class="step">
             <span class="num">5</span>
             <p class="label">カテゴリ/順序/無効化</p>
-            <p class="desc">使用率で major/minor/other、古い候補は無効化。</p>
+            <p class="desc">閾値方式または固定件数方式で major/minor/other、古い候補は無効化。</p>
           </div>
         </div>
 
-        <h3>使用率計算の考え方</h3>
-        <div class="card soft">
-          <p>
-            集計対象は <code>usage_period_days</code> 日以内の <code>battles</code> です。
-            分母は <code>期間内の対戦数 + 有効デッキの admin_bonus_count 合計</code>。
-            各デッキの使用率は <code>(そのデッキの対戦数 + admin_bonus_count) / 分母 * 100</code> で計算されます。
-          </p>
-          <div class="legend">
-            <span class="tag major">使用率 >= major_threshold</span>
-            <span class="tag minor">使用率 >= minor_threshold</span>
-            <span class="tag other">それ未満</span>
+        <h3>分類方式の考え方</h3>
+        <div class="grid cols-2">
+          <div class="card soft">
+            <p class="big">閾値方式 <code>threshold</code></p>
+            <p>
+              集計対象は <code>usage_period_days</code> 日以内の <code>battles</code> です。
+              分母は <code>期間内の対戦数 + 有効デッキの admin_bonus_count 合計</code>。
+              各デッキの使用率は <code>(そのデッキの対戦数 + admin_bonus_count) / 分母 * 100</code> で計算されます。
+            </p>
+            <div class="legend">
+              <span class="tag major">使用率 >= major_threshold</span>
+              <span class="tag minor">使用率 >= minor_threshold</span>
+              <span class="tag other">それ未満</span>
+            </div>
           </div>
+          <div class="card soft">
+            <p class="big">デッキ数固定方式 <code>fixed_count</code></p>
+            <p>
+              有効デッキを <code>対戦数 + admin_bonus_count</code> の使用数降順で並べ、
+              上位 <code>major_fixed_count</code> 件を major、続く <code>minor_fixed_count</code> 件を minor にします。
+              使用数が0件のデッキは、固定枠が余っていても必ず other です。
+            </p>
+            <div class="legend">
+              <span class="tag major">上位 major_fixed_count</span>
+              <span class="tag minor">次の minor_fixed_count</span>
+              <span class="tag other">使用数0は other 固定</span>
+            </div>
+          </div>
+        </div>
+        <div class="note">
+          固定件数方式では、古い有効デッキの無効化を先に実行してから分類します。
+          これにより、固定枠は再計算時点で有効なデッキだけで埋まります。
         </div>
 
         <table>
@@ -729,7 +754,7 @@
             </tr>
             <tr>
               <td>major/minor/other</td>
-              <td>使用率と閾値で自動更新。管理画面の「試し計算」はプレビューのみでDB更新しません。</td>
+              <td>分類方式に応じて自動更新。閾値方式は使用率、固定件数方式は使用数順位で分類します。管理画面の「試し計算」はカテゴリのプレビューのみで、DB更新や自動無効化はしません。</td>
               <td><code>recalculate_opponent_decks</code> または <code>run_daily_opponent_deck_batch</code></td>
             </tr>
             <tr>
@@ -844,9 +869,14 @@
         </div>
         <ul>
           <li>管理者が有効ボタンを押して <code>変更内容反映</code>。</li>
-          <li>autoモードで、その対面名が新規または再使用された。</li>
+          <li>admin/autoモードで、masterに存在しない未登録対面名が新規追加された。</li>
+          <li>autoモードで、無効だった既存デッキが再使用された。</li>
           <li>Limitless同期で、今回のスナップショットに含まれた。</li>
         </ul>
+        <p class="small">
+          注意: admin/Limitlessモードでは、既にmasterに存在する無効デッキを対戦記録で再使用しても自動では有効化しません。
+          自動有効化されるのは admin/auto の新規追加、または auto の既存再使用です。
+        </p>
         <div class="switch-line">
           <div class="state on">有効</div>
           <div class="arrow">→</div>
@@ -872,7 +902,7 @@
             </tr>
             <tr>
               <td>ユーザー入力依存</td>
-              <td>再計算時に使用率が <code>major_threshold</code> 以上なら major、<code>minor_threshold</code> 以上なら minor、それ以外は other。</td>
+              <td><code>classification_method</code> により、使用率の閾値方式または使用数順位の固定件数方式で分類。固定件数方式でも使用数0件は other 固定。</td>
             </tr>
             <tr>
               <td>LimitlessTCG依存</td>
@@ -909,14 +939,14 @@
         <tr>
           <td>管理者による追加</td>
           <td>追加フォームで名前とカテゴリを指定し、反映時に <code>opponent_deck_master</code> にINSERT。初期状態は有効。</td>
-          <td>追加フォーム自体は使えます。反映後に再計算が走るため、カテゴリは使用率で上書きされます。</td>
+          <td>追加フォーム自体は使えます。反映後に再計算が走るため、カテゴリは選択中の分類方式で上書きされます。</td>
           <td>Limitlessモードの画面には通常の追加フォームは出ません。</td>
         </tr>
         <tr>
           <td>ユーザー入力による追加</td>
-          <td>未登録名が対戦記録に入ると <code>category=other</code>, <code>is_active=false</code> で自動追加。</td>
           <td>未登録名が対戦記録に入ると <code>category=other</code>, <code>is_active=true</code> で自動追加。</td>
-          <td><code>management_mode</code> が auto ではないため、未登録名は無効の manual 行として追加されます。Limitless由来リストには混ざりません。</td>
+          <td>未登録名が対戦記録に入ると <code>category=other</code>, <code>is_active=true</code> で自動追加。</td>
+          <td>未登録名が対戦記録に入ると <code>category=other</code>, <code>is_active=false</code> の manual 行として追加されます。Limitless由来リストには混ざりません。</td>
         </tr>
         <tr>
           <td>Limitlessによる追加</td>
@@ -932,7 +962,7 @@
         </tr>
         <tr>
           <td>自動削除</td>
-          <td>ありません。自動追加された無効候補も残ります。</td>
+          <td>ありません。自動追加された候補も残ります。</td>
           <td>ありません。古い候補は削除ではなく無効化です。</td>
           <td>ありません。スナップショットから消えたデッキも削除ではなく無効化です。</td>
         </tr>
@@ -953,7 +983,7 @@
         <p class="big">画面/APIルート</p>
         <div class="route">
           <b><code>/admin/opponent-decks</code></b>
-          <p>管理者用の対面デッキ管理画面。モード変更、閾値変更、追加、削除、有効切替、カテゴリ変更、Limitless和名編集を行います。</p>
+          <p>管理者用の対面デッキ管理画面。モード変更、分類方式/閾値/固定件数変更、追加、削除、有効切替、カテゴリ変更、Limitless和名編集を行います。</p>
         </div>
         <div class="route">
           <b><code>/dm/battle</code> / <code>/pokepoke/battle</code></b>
@@ -977,7 +1007,7 @@
         </div>
         <div class="route">
           <b><code>auto_add_opponent_deck</code></b>
-          <p>対戦記録から master の存在確認、追加、<code>last_used_at</code> 更新、auto時の再有効化を担当。</p>
+          <p>対戦記録から master の存在確認、追加、<code>last_used_at</code> 更新を担当。新規追加は admin/auto が有効、Limitless が無効。既存行の再有効化は auto のみ。</p>
         </div>
         <div class="route">
           <b><code>recalculate_opponent_decks</code></b>
@@ -1019,6 +1049,7 @@
         <li><code>supabase/migrations/20260421000001_limitless_sync.sql</code></li>
         <li><code>supabase/migrations/20260519000002_canonicalize_opponent_deck_name.sql</code></li>
         <li><code>supabase/migrations/20260519000003_admin_rpc_explicit_is_manual.sql</code></li>
+        <li><code>supabase/migrations/20260520000001_opponent_deck_update_method_changes.sql</code></li>
         <li><code>src/lib/supabase/database.types.ts</code></li>
       </ul>
     </div>

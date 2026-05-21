@@ -142,6 +142,7 @@ export type Database = {
           deck_id: string
           game_title: string
           id: string
+          is_archived: boolean
           name: string
           sort_order: number
         }
@@ -150,6 +151,7 @@ export type Database = {
           deck_id: string
           game_title?: string
           id?: string
+          is_archived?: boolean
           name: string
           sort_order?: number
         }
@@ -158,6 +160,7 @@ export type Database = {
           deck_id?: string
           game_title?: string
           id?: string
+          is_archived?: boolean
           name?: string
           sort_order?: number
         }

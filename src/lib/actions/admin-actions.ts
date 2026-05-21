@@ -389,7 +389,7 @@ export async function getAdminUserDecks(userId: string, format: string, game: Ga
   const supabase = createClient();
   const { data } = await supabase
     .from("decks")
-    .select("id, name, sort_order, deck_tunings(id, name, sort_order)")
+    .select("id, name, sort_order, deck_tunings(id, name, sort_order, is_archived)")
     .eq("user_id", userId)
     .eq("game_title", game)
     .eq("format", format)
@@ -398,9 +398,11 @@ export async function getAdminUserDecks(userId: string, format: string, game: Ga
 
   return (data ?? []).map(d => ({
     ...d,
-    deck_tunings: (d.deck_tunings ?? []).sort(
-      (a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order
-    ),
+    deck_tunings: (d.deck_tunings ?? [])
+      .filter((t: { is_archived: boolean }) => !t.is_archived)
+      .sort(
+        (a: { sort_order: number }, b: { sort_order: number }) => a.sort_order - b.sort_order
+      ),
   }));
 }
 
