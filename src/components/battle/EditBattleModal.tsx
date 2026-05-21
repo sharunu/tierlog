@@ -66,9 +66,30 @@ const MemoIcon = ({ active, hasMemo }: { active: boolean; hasMemo: boolean }) =>
 
 export function EditBattleModal({ battle, decks, suggestions, onSave, onClose }: Props) {
   const { slug: game } = useGame();
-  const recordedDeckExists = decks.some(d => d.name === battle.my_deck_name);
-  const initialValue = !recordedDeckExists
-    ? `__snapshot__:${battle.my_deck_name}`
+  // active tuning を id→tuning で引けるようにする (name 比較に使うため Set ではなく Map)
+  const activeTuningById = new Map<string, Tuning>();
+  for (const d of decks) {
+    for (const t of (d.deck_tunings ?? [])) activeTuningById.set(t.id, t);
+  }
+
+  // 記録時デッキが「同一 active デッキ ID かつ記録時名と一致」で現存するか。
+  // 名前一致のみだと、削除/改名済み元デッキと同名の別 active デッキを後から
+  // 作成したケースで誤判定するため id + name の複合判定にする。
+  const recordedDeckExists = decks.some(
+    d => d.id === battle.my_deck_id && d.name === battle.my_deck_name
+  );
+  // 記録時 tuning が「現存しない」または「現存するが現在名が記録時名と異なる(改名)」
+  // なら snapshot 扱い。tuning 改名単体でも battles.tuning_name は記録時名で保持される
+  // 設計 (tuning_id 不変 → normalize_battle_deck_names trigger の OLD 名保持分岐) のため、
+  // 編集画面でも記録時名を初期選択にして履歴一覧と一貫させる。
+  const recordedTuningStale =
+    battle.tuning_id != null &&
+    (!activeTuningById.has(battle.tuning_id) ||
+      activeTuningById.get(battle.tuning_id)!.name !== battle.tuning_name);
+  const needsSnapshot = !recordedDeckExists || recordedTuningStale;
+
+  const initialValue = needsSnapshot
+    ? "__snapshot__"
     : battle.tuning_id
       ? `${battle.my_deck_id}:${battle.tuning_id}`
       : battle.my_deck_id;
@@ -101,11 +122,11 @@ export function EditBattleModal({ battle, decks, suggestions, onSave, onClose }:
 
   const deckOptions: { value: string; label: string }[] = [];
 
-  if (!recordedDeckExists) {
-    deckOptions.push({
-      value: `__snapshot__:${battle.my_deck_name}`,
-      label: `${battle.my_deck_name}(記録時)`,
-    });
+  if (needsSnapshot) {
+    const snapshotLabel = battle.tuning_name
+      ? `${battle.my_deck_name} / ${battle.tuning_name}(記録時)`
+      : `${battle.my_deck_name}(記録時)`;
+    deckOptions.push({ value: "__snapshot__", label: snapshotLabel });
   }
 
   for (const deck of decks) {
@@ -128,7 +149,7 @@ export function EditBattleModal({ battle, decks, suggestions, onSave, onClose }:
       let myDeckName: string;
       let tuningName: string | null;
 
-      if (selectedValue.startsWith("__snapshot__:")) {
+      if (selectedValue === "__snapshot__") {
         deckId = battle.my_deck_id;
         tuningId = battle.tuning_id ?? null;
         myDeckName = battle.my_deck_name;
