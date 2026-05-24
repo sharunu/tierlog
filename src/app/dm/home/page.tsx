@@ -82,6 +82,8 @@ function HomePageInner() {
   }, [router]);
 
   useEffect(() => {
+    // loadData は useCallback ラップ済で内部で setState 経由 fetch 反映。
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
   }, [loadData]);
 
@@ -246,6 +248,9 @@ function HomePageInner() {
             disabled={!isShared}
           >
             {team.icon_url ? (
+              // Discord CDN の外部小サイズアイコン。Cloudflare Workers + OpenNext 環境では
+              // next/image の Image Optimization が使えないため、<img> のまま運用する。
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={team.icon_url}
                 alt=""

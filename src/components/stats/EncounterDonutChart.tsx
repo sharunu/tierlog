@@ -25,6 +25,11 @@ interface Props {
 
 const RADIAN = Math.PI / 180;
 
+// recharts の PieLabelRenderProps には自前で渡している `pct` (=100 倍したパーセント値) が
+// 含まれないため、library 型と互換にできない。recharts label render の関数型は
+// library 側で `(props: PieLabelRenderProps) => ReactNode` に固定されているので
+// per-line で any を許可する。
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const renderLabel = (props: any) => {
   const { cx, cy, midAngle, innerRadius, outerRadius, pct } = props;
   if (pct < 4) return null;
@@ -59,6 +64,8 @@ export function EncounterDonutChart({ items, otherBreakdown, overallWinRate, ove
 
   useEffect(() => { activeIndexRef.current = activeIndex; }, [activeIndex]);
 
+  // items (props) 変化時に「その他」を畳んだ状態へ同期 reset。
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setOtherExpanded(false); }, [items]);
 
   const data = useMemo(() =>

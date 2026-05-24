@@ -248,7 +248,8 @@ export function OpponentDeckManager({
   const [newCategory, setNewCategory] = useState<"major" | "minor" | "other">("major");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
-  const [loading, setLoading] = useState(false);
+  // setLoading は現状未使用 — 将来必要になった時に再 destructure する
+  const [loading] = useState(false);
 
   // Mode 2 specific — string state for free input
   const [majorThresholdStr, setMajorThresholdStr] = useState(String(initialSettings?.major_threshold ?? 3.0));
@@ -281,16 +282,23 @@ export function OpponentDeckManager({
     (initialSettings?.management_mode as Mode) ?? "admin"
   );
   const savedDecksRef = useRef(initialDecks);
-  const savedSettingsRef = useRef(initialSettings);
+  // savedSettings: 保存済み設定 (render 中の同期状態表示で参照するため state 化)。
+  // savedSettingsRef ではなく state にすることで react-hooks/refs エラーを回避する。
+  const [savedSettings, setSavedSettings] = useState(initialSettings);
   const savedStatsDecksRef = useRef<DeckWithStats[]>([]);
 
   // Notify parent of dirty/applying changes
   useEffect(() => { onDirtyChange?.(dirty); }, [dirty, onDirtyChange]);
   useEffect(() => { onApplyingChange?.(applying); }, [applying, onApplyingChange]);
-  useEffect(() => { if (applyRef) applyRef.current = handleApply; });
+  // handleApply 定義後に applyRef を更新する useEffect は、handleApply 定義 (下方) の
+  // 直後に配置している (react-hooks/immutability: 宣言前アクセス回避のため)
 
   // Sync with initialSettings/initialDecks when format changes
   useEffect(() => {
+    // format 切替で props (initialDecks/initialSettings) が変化した時、編集中の
+    // 全 state を一斉に initial 値へ同期リセットする。effect 内に十数個の setState が
+    // 連続するため、ブロック単位で disable する。
+    /* eslint-disable react-hooks/set-state-in-effect */
     const m = (initialSettings?.management_mode as Mode) ?? "admin";
     setMode(m);
     setDecks(initialDecks);
@@ -309,8 +317,9 @@ export function OpponentDeckManager({
     deletedDeckIdsRef.current.clear();
     savedModeRef.current = m;
     savedDecksRef.current = initialDecks;
-    savedSettingsRef.current = initialSettings;
+    setSavedSettings(initialSettings);
     savedStatsDecksRef.current = [];
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [initialDecks, initialSettings]);
 
   const loadStats = useCallback(async () => {
@@ -329,6 +338,9 @@ export function OpponentDeckManager({
   // Load stats when switching to auto mode
   useEffect(() => {
     if (mode === "auto" && !statsLoaded) {
+      // loadStats は useCallback ラップ済で内部で setState 経由 fetch 反映。
+      // mode=auto に切替時に statsLoaded フラグを true 化する。
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadStats();
     }
   }, [mode, statsLoaded, loadStats]);
@@ -379,7 +391,7 @@ export function OpponentDeckManager({
         ]);
         setDecks(freshDecks);
         savedDecksRef.current = freshDecks;
-        savedSettingsRef.current = freshSettings as Settings | null;
+        setSavedSettings(freshSettings as Settings | null);
       }
     } catch (e) {
       console.error(e);
@@ -594,7 +606,7 @@ export function OpponentDeckManager({
 
       if (mode === "limitless") {
         savedModeRef.current = mode;
-        savedSettingsRef.current = {
+        setSavedSettings({
           management_mode: mode,
           major_threshold: majorThreshold,
           minor_threshold: minorThreshold,
@@ -603,7 +615,7 @@ export function OpponentDeckManager({
           classification_method: classificationMethod,
           major_fixed_count: majorFixed,
           minor_fixed_count: minorFixed,
-        };
+        });
         // 分類方式・閾値を変えた場合は再同期でカテゴリ再計算させる
         if (!LIMITLESS_SYNC_PAUSED) {
           await triggerLimitlessSync().catch(() => {});
@@ -676,7 +688,7 @@ export function OpponentDeckManager({
       setDecks(freshDecks);
       savedDecksRef.current = freshDecks;
       savedModeRef.current = mode;
-      savedSettingsRef.current = {
+      setSavedSettings({
         management_mode: mode,
         major_threshold: majorThreshold,
         minor_threshold: minorThreshold,
@@ -685,7 +697,7 @@ export function OpponentDeckManager({
         classification_method: classificationMethod,
         major_fixed_count: majorFixed,
         minor_fixed_count: minorFixed,
-      };
+      });
 
       if (mode === "auto") {
         const result = await getOpponentDeckStatsForAdmin(format, game);
@@ -705,6 +717,10 @@ export function OpponentDeckManager({
       setApplying(false);
     }
   };
+
+  // applyRef を handleApply 定義後に更新する (react-hooks/immutability:
+  // 宣言前アクセスを回避するため、handleApply 定義より下に配置する)
+  useEffect(() => { if (applyRef) applyRef.current = handleApply; });
 
   // --- Add form (shared) ---
   const addForm = (
@@ -827,13 +843,13 @@ export function OpponentDeckManager({
               <div className="text-[12px] text-muted-foreground">
                 最終取得:{" "}
                 <span className="text-foreground">
-                  {savedSettingsRef.current?.limitless_last_synced_at
-                    ? new Date(savedSettingsRef.current.limitless_last_synced_at).toLocaleString("ja-JP")
+                  {savedSettings?.limitless_last_synced_at
+                    ? new Date(savedSettings.limitless_last_synced_at).toLocaleString("ja-JP")
                     : "未取得"}
                 </span>
-                {savedSettingsRef.current?.limitless_last_sync_status && (
+                {savedSettings?.limitless_last_sync_status && (
                   <span className="ml-2 text-muted-foreground">
-                    ({savedSettingsRef.current.limitless_last_sync_status})
+                    ({savedSettings.limitless_last_sync_status})
                   </span>
                 )}
               </div>

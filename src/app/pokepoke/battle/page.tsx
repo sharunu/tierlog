@@ -143,6 +143,8 @@ function BattlePageInner() {
   }, [loadInputData]);
 
   useEffect(() => {
+    // loadHistory は useCallback ラップ済で内部で setState 経由 fetch 反映。
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadHistory();
   }, [loadHistory]);
 
@@ -152,13 +154,15 @@ function BattlePageInner() {
   }, [loadCounts]);
 
   useEffect(() => {
+    // format 変化時に selectedDeck を同期 reset。
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedDeck(null);
   }, [format]);
 
-  const handleRangeChange = (start: string, end: string) => {
+  const handleRangeChange = useCallback((start: string, end: string) => {
     setStartDate(start);
     setEndDate(end);
-  };
+  }, [setStartDate, setEndDate]);
 
   const handleHistoryRefresh = useCallback(() => {
     loadHistory();
@@ -237,6 +241,7 @@ function BattlePageInner() {
     hasAny,
     historyLoading,
     handleHistoryRefresh,
+    handleRangeChange,
     hasMore,
     loadMoreLoading,
     loadMore,

@@ -18,6 +18,9 @@ export default function DecksPage() {
 
   useEffect(() => {
     if (!ready) return;
+    // ready/format 変化時に loading を同期 reset して再 fetch。Promise.all の .then() は
+    // effect 外で setState するためそちらは警告対象外。
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     Promise.all([getDecks(format), getOpponentDeckSuggestions(format)]).then(
       ([d, s]) => {

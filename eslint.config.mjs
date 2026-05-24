@@ -18,6 +18,13 @@ const eslintConfig = defineConfig([
     // Claude Code worktrees
     ".claude/worktrees/**",
   ]),
+  // `_` prefix を持つ引数は意図的な未使用（マルチゲーム対応の format-only RPC で
+  // _game を API 互換のため受け取るが、callee 内では未使用、など）として許可。
+  {
+    rules: {
+      "@typescript-eslint/no-unused-vars": ["error", { argsIgnorePattern: "^_" }],
+    },
+  },
 ]);
 
 export default eslintConfig;

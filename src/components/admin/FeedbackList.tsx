@@ -39,6 +39,8 @@ export function FeedbackList({ feedbacks }: Props) {
   const [updating, setUpdating] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
+    // 外部 props (feedbacks) 変化時に localFeedbacks state を同期。effect 内 setState が必要。
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLocalFeedbacks(feedbacks);
   }, [feedbacks]);
 

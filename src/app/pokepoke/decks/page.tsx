@@ -18,6 +18,8 @@ export default function DecksPage() {
 
   useEffect(() => {
     if (!ready) return;
+    // ready/format 変化時に loading を同期 reset して再 fetch。
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     Promise.all([
       getDecks(format, "pokepoke"),

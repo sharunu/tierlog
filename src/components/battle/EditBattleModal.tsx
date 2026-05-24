@@ -107,6 +107,8 @@ export function EditBattleModal({ battle, decks, suggestions, onSave, onClose }:
     if (cleaned) {
       getOpponentMemoSuggestions(cleaned, game).then(setMemoSuggestions);
     } else {
+      // opponentDeckName がクリアされたら memoSuggestions を空に同期リセット。
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMemoSuggestions([]);
     }
   }, [opponentDeckName, game]);
