@@ -2,6 +2,9 @@ import { createClient } from "@/lib/supabase/client";
 import { DEFAULT_GAME, type GameSlug } from "@/lib/games";
 import type { BattleResult } from "@/lib/battle/result-format";
 import { stripAllWhitespace } from "@/lib/util/whitespace";
+import type { Database } from "@/lib/supabase/database.types";
+
+type BattleUpdate = Database["public"]["Tables"]["battles"]["Update"];
 
 export async function recordBattle(formData: {
   myDeckId: string;
@@ -62,7 +65,7 @@ export async function updateBattle(
   } = await supabase.auth.getUser();
   if (!user) throw new Error("Not authenticated");
 
-  const updateData: Record<string, unknown> = {};
+  const updateData: BattleUpdate = {};
   if (fields.result !== undefined) updateData.result = fields.result;
   if (fields.turnOrder !== undefined) updateData.turn_order = fields.turnOrder;
   if (fields.opponentDeckName !== undefined) {
