@@ -513,6 +513,67 @@ CLAUDE.md の作業ルールに従う:
 
 ---
 
+## #3 lint エラー解消フェーズ 完了サマリ (2026-05-24)
+
+dev 上で 12 commits により 89 problems → 0 problems を達成。`npm run lint` / `npx tsc --noEmit` ともに 0 で通過、`git diff --check` 問題なし。codex によるレビュー実施済。
+
+### 数値結果
+
+- lint: **89 problems → 0** (errors 65 → 0, warnings 24 → 0)
+- typecheck: 1 error → 0 (#0 修正で battles Update 型に置換、以後維持)
+- 新規追加 directive: **計 54 directive** (実差分 c2b80e4..HEAD で確認)
+
+### 新規 disable directive 内訳（54 件）
+
+| ルール | next-line | block | 計 |
+|---|---:|---:|---:|
+| `react-hooks/set-state-in-effect` | 40 | 7 | **47** |
+| `@next/next/no-img-element` | 5 | 0 | 5 |
+| `@typescript-eslint/no-explicit-any` | 2 | 0 | 2 |
+| **計** | **47** | **7** | **54** |
+
+### `set-state-in-effect` 47 件のパターン分類
+
+§4-1 #1 で定義した 3 パターン (A/B/C) のうち:
+
+- **パターン A** (URL/localStorage/cookie/searchParams からの mount 時 resolve): 単一 disable 多数
+- **パターン C** (useCallback ラップ済 fetch トリガー、props/外部状態変化時の同期 reset): 単一 disable 多数 + block disable 全 7 箇所
+- **パターン B** (派生 state / 初期値計算で useMemo / `useState(() => init)` に置換可能なもの): **該当なし**。47 件すべてが mount/外部状態 resolve または fetch トリガー or props 同期のため、A・C として扱った
+
+→ よって今回の修正は plan の許容範囲内ですべて理由コメント付き disable で完了。実装修正による「派生 state 化」は対象外と判断。
+
+### block disable を採用した 7 箇所
+
+effect 内に 2 つ以上の setState が連続するケースは、per-line disable では「片方を抑制すると次が新たな警告対象に昇格」する挙動が確認されたため、`/* eslint-disable react-hooks/set-state-in-effect */` 〜 `/* eslint-enable */` で対応:
+
+1. `dm/stats/page.tsx` 仮選択ロジック (setActiveTeamId + setSelectedMemberId)
+2. `pokepoke/stats/page.tsx` 同上
+3. `BattleRecordForm.tsx:112-131` setSelectedValue × 4 (deck/format 変化時)
+4. `BattleRecordForm.tsx:139-148` setMemoSuggestions + setShowMemo + setOpponentMemo (opponentDeck クリア時)
+5. `OpponentDeckSelector.tsx:29-35` setShowOther + setShowMore + setSearchText (value クリア時)
+6. `AdminUserDecks.tsx:24-26` setLoading + setError (再 fetch 前 reset)
+7. `OpponentDeckManager.tsx:297-318` format 切替時の 12+ state 一斉 reset
+
+### 全 12 commits
+
+| # | hash | 内容 | 解消件数 |
+|---:|---|---|---:|
+| 1 | 421697a | Unused eslint-disable directive | 2 |
+| 2 | 506f522 | no-unused-vars | 15 |
+| 3 | 88515a4 | exhaustive-deps | 2 |
+| 4a | d048ab5 | admin RPC as any | 3 |
+| 4b | beaa2f7 | recharts no-explicit-any | 7 |
+| 5 | 9bc3261 | no-img-element | 5 |
+| 6 | 96afc5c | refs + immutability | 8 |
+| 7 | 0ca5591 | set-state (hooks) | 5 |
+| 8 | 3df913f | set-state (dm/pokepoke stats) | 10 |
+| 9 | 1e854fe | set-state (BattleRecordForm 等) | 6 |
+| 10 | 8a076ae | set-state (admin) | 8 |
+| 11 | 85a8061 | set-state (account + dm) | 9 |
+| 12 | 397b5bf | set-state (pokepoke + 他) | 9 |
+
+---
+
 ## Resolved Decisions
 
 review-plan-loop の judgment escalate でユーザーが確定した方針:
