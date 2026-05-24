@@ -93,6 +93,9 @@ export function BattleRecordForm({
 
   useEffect(() => {
     const saved = localStorage.getItem(`measureSince_${format}`);
+    // format 変化時に localStorage から measureSince を resolve する。
+    // 外部状態 (format) 変化時の同期 setState のため effect 内が必要。
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMeasureSince(saved);
   }, [format]);
 
@@ -105,12 +108,18 @@ export function BattleRecordForm({
   useEffect(() => {
     const saved = localStorage.getItem(`measureSince_${format}`);
     if (!saved) {
+      // localStorage に measureSince がない場合、サーバから受け取った initialMiniStats を反映。
+      // 外部状態 (initialMiniStats/format) に応じた同期 setState のため effect 内が必要。
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMiniStats(initialMiniStats);
     }
   }, [initialMiniStats, format]);
 
   useEffect(() => {
     const saved = localStorage.getItem(`selectedDeckSelection_${format}`);
+    // format / decks 変化時、localStorage の保存値を再 resolve して selectedValue を確定。
+    // 同 effect 内に setSelectedValue が複数回呼ばれるため block disable で抑制。
+    /* eslint-disable react-hooks/set-state-in-effect */
     if (saved) {
       const { deckId, tuningId } = parseDeckSelection(saved);
       const deck = decks.find(d => d.id === deckId);
@@ -128,6 +137,7 @@ export function BattleRecordForm({
     } else {
       setSelectedValue("");
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [decks, format]);
 
   useEffect(() => {
@@ -141,9 +151,12 @@ export function BattleRecordForm({
     if (cleaned) {
       getOpponentMemoSuggestions(cleaned, game).then(setMemoSuggestions);
     } else {
+      // opponentDeck がクリアされたら memo 関連 3 つを同期リセット。block disable で抑制。
+      /* eslint-disable react-hooks/set-state-in-effect */
       setMemoSuggestions([]);
       setShowMemo(false);
       setOpponentMemo("");
+      /* eslint-enable react-hooks/set-state-in-effect */
     }
   }, [opponentDeck, game]);
 

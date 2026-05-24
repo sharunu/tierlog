@@ -28,9 +28,12 @@ export function OpponentDeckSelector({
 
   useEffect(() => {
     if (value === "") {
+      // value がクリアされたら 3 つの UI state を同期リセット。block disable で抑制。
+      /* eslint-disable react-hooks/set-state-in-effect */
       setShowOther(false);
       setShowMore(false);
       setSearchText("");
+      /* eslint-enable react-hooks/set-state-in-effect */
     }
   }, [value]);
 
