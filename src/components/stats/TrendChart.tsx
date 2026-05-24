@@ -27,7 +27,7 @@ function CustomTrendTooltip({
   deckColorMap,
 }: {
   active?: boolean;
-  payload?: any[];
+  payload?: Array<{ dataKey: string; value?: number; payload?: Record<string, number | string | undefined> }>;
   label?: string;
   highlightedDeck: string | null;
   deckColorMap: Map<string, string>;
@@ -35,7 +35,7 @@ function CustomTrendTooltip({
   if (!active || !payload || payload.length === 0) return null;
 
   const items = highlightedDeck
-    ? payload.filter((p: any) => p.dataKey === highlightedDeck)
+    ? payload.filter((p) => p.dataKey === highlightedDeck)
     : payload;
 
   if (items.length === 0) return null;
@@ -50,7 +50,7 @@ function CustomTrendTooltip({
       className="bg-surface-2 rounded-lg shadow-lg px-2.5 py-2 text-xs text-foreground min-w-[100px]"
       style={{ border: `0.5px solid ${borderColor}` }}
     >
-      {items.map((entry: any) => {
+      {items.map((entry) => {
         const color = deckColorMap.get(entry.dataKey) ?? "var(--muted-foreground)";
         const battleCount = entry.payload?.[`__bc_${entry.dataKey}`];
         return (
@@ -184,9 +184,14 @@ export function TrendChart({ data }: { data: TrendDataPoint[] }) {
                     stroke={color}
                     strokeWidth={sw}
                     opacity={op}
-                    dot={dotConfig as any}
+                    dot={dotConfig}
                     activeDot={{
                       r: 5,
+                      // recharts activeDot.onClick の signature は
+                      // RechartsMouseEventHandler<DotProps, SVGCircleElement> で、
+                      // React.MouseEvent 単独型と互換にできないため per-line で any を許可。
+                      // event arg は stopPropagation() を呼べるオブジェクトとしてのみ使う。
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       onClick: (e: any) => {
                         e?.stopPropagation?.();
                         handleLineClick(deck);
@@ -208,7 +213,9 @@ export function TrendChart({ data }: { data: TrendDataPoint[] }) {
           const color = deckColorMap.get(deck) ?? "var(--muted-foreground)";
           const isHighlighted = highlightedDeck === deck;
           const hasHighlight = highlightedDeck !== null;
-          const latestPct = (latestPeriod as any)?.[deck];
+          // chartData の要素型は `{ date: string }` のみとして推論され、spread した
+          // `...decks: Record<string, number>` が継承されないため、明示的に narrow する。
+          const latestPct = (latestPeriod as Record<string, number | string | undefined> | undefined)?.[deck];
 
           return (
             <div
