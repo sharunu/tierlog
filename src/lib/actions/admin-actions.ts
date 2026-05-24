@@ -377,7 +377,7 @@ export type AdminUserListRow = {
 export async function getAdminUserList(): Promise<AdminUserListRow[]> {
   await requireAdmin();
   const supabase = createClient();
-  const { data, error } = await (supabase.rpc as any)("get_users_for_admin");
+  const { data, error } = await supabase.rpc("get_users_for_admin");
   if (error) throw new Error(error.message);
   return (data ?? []) as AdminUserListRow[];
 }
@@ -617,7 +617,7 @@ export async function updateFeedbackStatus(
   status: "pending" | "resolved"
 ): Promise<void> {
   const supabase = await requireAdmin();
-  const { error } = await (supabase.rpc as any)("update_feedback_status", {
+  const { error } = await supabase.rpc("update_feedback_status", {
     p_feedback_id: feedbackId,
     p_status: status,
   });
@@ -909,7 +909,7 @@ export type AdminUserDetail = {
 
 export async function getAdminUserDetail(userId: string): Promise<AdminUserDetail> {
   const supabase = await requireAdmin();
-  const { data, error } = await (supabase.rpc as any)('get_user_detail_for_admin', { p_user_id: userId });
+  const { data, error } = await supabase.rpc('get_user_detail_for_admin', { p_user_id: userId });
   if (error) throw new Error(error.message);
   return data as AdminUserDetail;
 }
