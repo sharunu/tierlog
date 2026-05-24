@@ -17,6 +17,9 @@ export function useSelectedGame(): { game: GameSlug; setGame: (g: GameSlug) => v
     try {
       const saved = window.localStorage.getItem("selectedGame");
       if (isGameSlug(saved)) {
+        // mount 時に localStorage から resolve した値を state に反映。SSR safe 初期値
+        // (DEFAULT_GAME) と client mount 後の resolve を分離するための意図的な effect 内 setState。
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setGameState(saved);
       }
     } catch {

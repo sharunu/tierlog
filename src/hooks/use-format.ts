@@ -45,6 +45,9 @@ export function useFormat() {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    // gameSlug (context) が変化したら、対応する localStorage キーから format を再 resolve する。
+    // useGameOptional() の値 = 外部状態なので、effect 内で同期して setState する必要がある。
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setFormatState(readInitialFormat(gameSlug));
     setReady(true);
   }, [gameSlug]);

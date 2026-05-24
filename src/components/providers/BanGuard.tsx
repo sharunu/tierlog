@@ -16,6 +16,10 @@ export function BanGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (isExcluded) {
+      // EXCLUDED_PATHS (auth/terms/privacy/share) では即座に isBanned=false を確定して
+      // children を描画する。それ以外は下の supabase.auth.getUser() 等の非同期処理を
+      // 待ってから setIsBanned する流れで、構造上 effect 内 setState が必要。
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsBanned(false);
       return;
     }

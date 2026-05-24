@@ -29,6 +29,9 @@ export function BottomNav() {
     if (fromPath) return;
     const match = document.cookie.match(/(?:^|; )selectedGame=([^;]+)/);
     if (match && isGameSlug(match[1])) {
+      // mount 時に document.cookie から selectedGame を resolve して state に反映。
+      // SSR では document.cookie が読めないため、effect 内 setState が必要。
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCookieGame(match[1]);
     }
   }, [fromPath]);
