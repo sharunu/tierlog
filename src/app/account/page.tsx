@@ -409,6 +409,14 @@ export default function AccountPage() {
               </div>
             </Link>
 
+            {/* お問い合わせ */}
+            <Link href="/contact">
+              <div className="bg-surface-2 rounded-[10px] px-4 py-[14px] flex items-center justify-between cursor-pointer mt-3">
+                <p className="text-[14px]">お問い合わせ</p>
+                <span className="text-muted-foreground text-[18px]">&rsaquo;</span>
+              </div>
+            </Link>
+
             {/* ログアウト */}
             <div
               className="rounded-[10px] px-4 py-[14px] flex items-center justify-between cursor-pointer mt-3"

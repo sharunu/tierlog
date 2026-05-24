@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { getUserStage } from "@/lib/actions/account-actions";
 import { Ban } from "lucide-react";
 
-const EXCLUDED_PATHS = ["/auth", "/terms", "/privacy", "/share"];
+const EXCLUDED_PATHS = ["/auth", "/terms", "/privacy", "/contact", "/share"];
 
 export function BanGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
