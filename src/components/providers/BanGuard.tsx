@@ -6,7 +6,12 @@ import { createClient } from "@/lib/supabase/client";
 import { getUserStage } from "@/lib/actions/account-actions";
 import { Ban } from "lucide-react";
 
-const EXCLUDED_PATHS = ["/auth", "/terms", "/privacy", "/share"];
+// BanGuard を bypass する公開ページ。
+// - /auth: ログイン画面 (未認証ユーザーの導線)
+// - /terms, /privacy: 法務文書 (ログイン不要の閲覧)
+// - /contact: ログイン不要の問い合わせ窓口 (ban されたユーザーも到達できる必要あり)
+// - /share: 共有 OG ページ (匿名アクセス想定)
+const EXCLUDED_PATHS = ["/auth", "/terms", "/privacy", "/contact", "/share"];
 
 export function BanGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -16,7 +21,7 @@ export function BanGuard({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (isExcluded) {
-      // EXCLUDED_PATHS (auth/terms/privacy/share) では即座に isBanned=false を確定して
+      // EXCLUDED_PATHS (auth/terms/privacy/contact/share) では即座に isBanned=false を確定して
       // children を描画する。それ以外は下の supabase.auth.getUser() 等の非同期処理を
       // 待ってから setIsBanned する流れで、構造上 effect 内 setState が必要。
       // eslint-disable-next-line react-hooks/set-state-in-effect

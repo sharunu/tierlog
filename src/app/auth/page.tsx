@@ -265,6 +265,9 @@ export default function AuthPage() {
           <Link href="/privacy" className="text-[11px] text-muted-foreground hover:text-foreground">
             プライバシーポリシー
           </Link>
+          <Link href="/contact" className="text-[11px] text-muted-foreground hover:text-foreground">
+            お問い合わせ
+          </Link>
         </div>
         <p className="text-center text-[10px] text-muted-foreground mt-2">
           本アプリは非公式のファンツールであり、各ゲームの開発元・運営元とは関係ありません。

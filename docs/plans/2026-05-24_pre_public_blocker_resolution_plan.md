@@ -580,3 +580,6 @@ review-plan-loop の judgment escalate でユーザーが確定した方針:
 
 - [stats helper場所] stats-actions.ts の private helper（toN / toWinRate / mapDetailRow / rowToDetail）を抽出する新規モジュールの置き場所はどちらにしますか？ → **src/lib/stats/**（追加条件: actions は DB I/O 層として残し、純関数は `src/lib/stats/` に抽出。循環依存回避のため `src/lib/stats/` から `src/lib/actions/` への import は禁止）
 - [Sentry URL] Sentry docs URL について、codex 指摘（`docs.sentry.dev`）と HTML の `<link rel="canonical">`（`docs.sentry.io` を指す）が矛盾。どちらを採用するか？ → **`docs.sentry.io` を保持**（Sentry 公式 HTML canonical タグを優先。`docs.sentry.dev` は閲覧可能なミラー/配信先扱いで、plan の公式参照 URL は `https://docs.sentry.io/platforms/javascript/guides/cloudflare/` で統一）
+- [問い合わせ窓口] #1+#2 の問い合わせ窓口の形式は？ → **メール公開（`contact@tierlog.app` 新設）**。privacy / terms / contact に `contact@tierlog.app` を記載。Cloudflare Email Routing の設定手順は別途案内（受信専用・無料・既存 MX と排他なので事前確認）
+- [管轄裁判所] #1+#2 の terms の専属的合意管轄裁判所は？ → **東京地方裁判所**。「東京地方裁判所を第一審の専属的合意管轄裁判所とします」の表現で統一
+- [専門家確認] #1+#2 の法務文言の専門家確認 (弁護士等) のタイミングは？ → **一次案で公開し、公開後に専門家確認**。今回は PPC ガイドライン等の公式資料ベースで一次案を整える範囲とし、文中 / 完了報告で「最終的な法的判断ではなく、公開後に専門家確認予定」と明記
