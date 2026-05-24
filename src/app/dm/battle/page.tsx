@@ -151,10 +151,10 @@ function BattlePageInner() {
     setSelectedDeck(null);
   }, [format]);
 
-  const handleRangeChange = (start: string, end: string) => {
+  const handleRangeChange = useCallback((start: string, end: string) => {
     setStartDate(start);
     setEndDate(end);
-  };
+  }, [setStartDate, setEndDate]);
 
   const handleHistoryRefresh = useCallback(() => {
     loadHistory();
@@ -232,6 +232,7 @@ function BattlePageInner() {
     hasAny,
     historyLoading,
     handleHistoryRefresh,
+    handleRangeChange,
     hasMore,
     loadMoreLoading,
     loadMore,
