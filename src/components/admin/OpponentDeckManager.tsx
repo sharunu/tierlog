@@ -248,7 +248,8 @@ export function OpponentDeckManager({
   const [newCategory, setNewCategory] = useState<"major" | "minor" | "other">("major");
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
-  const [loading, setLoading] = useState(false);
+  // setLoading は現状未使用 — 将来必要になった時に再 destructure する
+  const [loading] = useState(false);
 
   // Mode 2 specific — string state for free input
   const [majorThresholdStr, setMajorThresholdStr] = useState(String(initialSettings?.major_threshold ?? 3.0));

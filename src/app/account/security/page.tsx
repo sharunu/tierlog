@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { changePassword, getAuthProvider, getEmail, deleteAccount, getDisplayName } from "@/lib/actions/account-actions";
+import { changePassword, getAuthProvider, deleteAccount, getDisplayName } from "@/lib/actions/account-actions";
 import { BottomNav } from "@/components/layout/BottomNav";
 
 function SecurityPageInner() {
@@ -15,7 +15,6 @@ function SecurityPageInner() {
 
   const [pageLoading, setPageLoading] = useState(true);
   const [provider, setProvider] = useState("");
-  const [email, setEmail] = useState("");
   const [displayName, setDisplayName] = useState("");
 
   // パスワード変更
@@ -34,13 +33,11 @@ function SecurityPageInner() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [prov, mail, name] = await Promise.all([
+        const [prov, name] = await Promise.all([
           getAuthProvider(),
-          getEmail(),
           getDisplayName(),
         ]);
         setProvider(prov);
-        setEmail(mail);
         setDisplayName(name);
       } catch {
         console.error("Failed to load security data");
@@ -64,7 +61,6 @@ function SecurityPageInner() {
 
   const isSnsLogin = provider === "google" || provider === "twitter";
   const isGuest = provider === "anonymous" || provider === "unknown";
-  const isEmailLogin = !isSnsLogin && !isGuest;
 
   const handleChangePassword = async () => {
     if (!isRecovery && !currentPassword) return;

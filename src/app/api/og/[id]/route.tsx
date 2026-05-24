@@ -297,8 +297,6 @@ function renderDeckOg(d: DeckData, shareType: string, appUrl: string, trackerNam
   const firstDraws = d.firstDraws ?? 0;
   const secondDraws = d.secondDraws ?? 0;
   const totalBattles = d.totalWins + d.totalLosses + totalDraws;
-  const firstTotal = d.firstWins + d.firstLosses + firstDraws;
-  const secondTotal = d.secondWins + d.secondLosses + secondDraws;
   const firstRate = (d.firstWins + d.firstLosses) > 0 ? Math.round((d.firstWins / (d.firstWins + d.firstLosses)) * 100) : 0;
   const secondRate = (d.secondWins + d.secondLosses) > 0 ? Math.round((d.secondWins / (d.secondWins + d.secondLosses)) * 100) : 0;
 

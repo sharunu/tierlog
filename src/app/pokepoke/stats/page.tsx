@@ -25,7 +25,6 @@ import { TeamServerCard } from "@/components/stats/TeamServerCard";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { PageShell } from "@/components/ui/PageShell";
 import { Crown, Lock } from "lucide-react";
-import { getWinRateColor } from "@/lib/stats-utils";
 import { TurnOrderCards } from "@/components/stats/TurnOrderCards";
 import { ShareButton } from "@/components/share/ShareButton";
 import type { StatsShareData } from "@/components/share/ShareButton";
@@ -277,7 +276,7 @@ function StatsPageInner() {
       // Aggregate opponent deck stats: major/minor individual, other -> "その他"
       const aggregatedDonut: { name: string; total: number; winRate: number | null }[] = [];
       const otherBreakdown: { name: string; total: number; winRate: number | null }[] = [];
-      let otherWins = 0, otherLosses = 0, otherDraws = 0, otherTotal = 0;
+      let otherWins = 0, otherLosses = 0, otherTotal = 0;
       for (const o of stats.opponentDeckStats) {
         const cat = categoryMap.get(o.deckName) ?? "other";
         if (cat === "major" || cat === "minor") {
@@ -285,7 +284,6 @@ function StatsPageInner() {
         } else {
           otherWins += o.wins;
           otherLosses += o.losses;
-          otherDraws += o.draws;
           otherTotal += o.total;
           otherBreakdown.push({ name: o.deckName, total: o.total, winRate: o.winRate });
         }

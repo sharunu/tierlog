@@ -13,7 +13,6 @@ import { MyDeckStatsSection } from "@/components/stats/MyDeckStatsSection";
 import { OpponentDeckStatsSection } from "@/components/stats/OpponentDeckStatsSection";
 import { TrendChart } from "@/components/stats/TrendChart";
 import { TrendHeatmap } from "@/components/stats/TrendHeatmap";
-import { getWinRateColor } from "@/lib/stats-utils";
 import { DEFAULT_GAME, type GameSlug } from "@/lib/games";
 
 type Props = {
@@ -138,7 +137,7 @@ export function AdminUserStats({ userId, format, game = DEFAULT_GAME }: Props) {
 
     const aggregatedDonut: { name: string; total: number; winRate: number | null }[] = [];
     const otherBreakdown: { name: string; total: number; winRate: number | null }[] = [];
-    let otherWins = 0, otherLosses = 0, otherDraws = 0, otherTotal = 0;
+    let otherWins = 0, otherLosses = 0, otherTotal = 0;
     for (const o of stats.opponentDeckStats) {
       const cat = categoryMap.get(o.deckName) ?? "other";
       if (cat === "major" || cat === "minor") {
@@ -146,7 +145,6 @@ export function AdminUserStats({ userId, format, game = DEFAULT_GAME }: Props) {
       } else {
         otherWins += o.wins;
         otherLosses += o.losses;
-        otherDraws += o.draws;
         otherTotal += o.total;
         otherBreakdown.push({ name: o.deckName, total: o.total, winRate: o.winRate });
       }
