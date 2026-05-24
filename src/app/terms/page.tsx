@@ -22,10 +22,6 @@ export default function TermsPage() {
       <div className="bg-surface-2 rounded-[10px] px-4 py-5 space-y-5 text-[13px] text-foreground leading-relaxed">
         <p className="text-[11px] text-muted-foreground">最終更新日: 2026年5月24日</p>
 
-        <p className="text-[12px] text-muted-foreground">
-          一次案であり、公開後に専門家確認を経て改訂する予定です。
-        </p>
-
         <section>
           <h2 className="text-[14px] font-medium text-foreground mb-2">非公式ツールについて</h2>
           <p>

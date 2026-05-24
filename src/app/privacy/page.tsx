@@ -25,7 +25,6 @@ export default function PrivacyPage() {
         <p className="text-[12px] text-muted-foreground">
           本ポリシーは、個人情報の保護に関する法律（個人情報保護法）および同ガイドラインに基づき、
           Tierlog（以下「本サービス」）における個人情報の取り扱いを定めるものです。
-          一次案であり、公開後に専門家確認を経て改訂する予定です。
         </p>
 
         <section>
@@ -65,26 +64,35 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="text-[14px] font-medium text-foreground mb-2">4. 外部サービスの利用（委託）</h2>
-          <p>
-            本サービスは、運営に必要な範囲で、以下の外部サービスに個人データの取扱いを委託しています。
-            委託先は、本サービスから受領したデータを本サービスの提供以外の目的で利用しません。
-          </p>
+          <h2 className="text-[14px] font-medium text-foreground mb-2">4. 外部サービスの利用</h2>
+          <p>本サービスの運営に必要な範囲で、以下の外部サービスを利用しています。</p>
+
+          <p className="mt-3 font-medium">a. 個人データの取扱いを委託している外部サービス</p>
           <ul className="list-disc list-inside space-y-1 mt-1">
-            <li><span className="font-medium">Supabase</span>：ユーザー認証およびデータベース。米国法人（Supabase Inc.）が運営し、データは Supabase が指定するリージョン（本サービスは主に米国）に保管されます。</li>
-            <li><span className="font-medium">Cloudflare Workers</span>：アプリケーションの実行・配信。米国法人（Cloudflare, Inc.）が運営し、世界各地のエッジサーバーで処理されます。</li>
-            <li><span className="font-medium">Cloudflare Web Analytics</span>：匿名のアクセス統計。Cloudflare 公式の説明によれば、訪問者の個人情報を収集・使用しません（Cookie・指紋・端末識別子を使用しない設計）。</li>
-            <li><span className="font-medium">Discord OAuth・Discord 連携 API</span>：Discord ログインおよび Discord サーバー連携機能。米国法人（Discord Inc.）が運営します。</li>
-            <li><span className="font-medium">Google OAuth</span>：Google ログイン。米国法人（Google LLC）が運営します。</li>
-            <li><span className="font-medium">X OAuth</span>：X（旧 Twitter）連携。米国法人（X Corp.）が運営します。</li>
+            <li><span className="font-medium">Supabase Inc.（米国）</span>：ユーザー認証およびデータベース。データは、本サービスで利用する Supabase プロジェクトの設定リージョン（Supabase Inc. が運営する米国・EU 等のデータセンターのいずれか）に保管されます。</li>
+            <li><span className="font-medium">Cloudflare, Inc.（米国）</span>：アプリケーションの実行・配信（Cloudflare Workers）、および匿名アクセス統計（Cloudflare Web Analytics）。Cloudflare 公式の説明によれば、Cloudflare Web Analytics は訪問者の個人情報を収集・使用せず、Cookie・指紋・端末識別子を使用しない設計です。</li>
           </ul>
+          <p className="mt-2 text-[12px] text-muted-foreground">
+            委託先各社とは、各社の利用規約・プライバシーポリシー・セキュリティ仕様等に基づき、本サービスの提供に必要な範囲で個人データを適切に取り扱うよう求めています。
+          </p>
+
+          <p className="mt-3 font-medium">b. 認証プロバイダ・外部サービス連携</p>
+          <ul className="list-disc list-inside space-y-1 mt-1">
+            <li><span className="font-medium">Google LLC（米国）</span>：Google ログイン</li>
+            <li><span className="font-medium">X Corp.（米国）</span>：X 連携および X ログイン</li>
+            <li><span className="font-medium">Discord Inc.（米国）</span>：Discord ログインおよび Discord サーバー連携機能</li>
+          </ul>
+          <p className="mt-2 text-[12px] text-muted-foreground">
+            利用者が各社のソーシャルログインまたは連携機能を有効化すると、本サービスと各社の間で認証情報・プロフィール情報等の連携が行われます。これは、本サービスと各社の間で個別の委託契約を締結しているものではなく、利用者が各社のサービス利用規約に同意した上で連携を有効化する形で実現されています。各社による個人情報の取扱いは、各社のプライバシーポリシーに従います。
+          </p>
         </section>
 
         <section>
           <h2 className="text-[14px] font-medium text-foreground mb-2">5. 外国にある第三者への提供</h2>
           <p>
-            前項のとおり、本サービスは以下の外国にある第三者（外国法人）に個人データの取扱いを委託しています。
-            個人情報保護法第28条第2項および同法施行規則第17条第2項に基づき、以下の情報を提供します。
+            前項のとおり、本サービスは以下の外国にある第三者（外国法人）に個人データの取扱いを委託し、
+            または利用者の同意に基づき個人データの第三者提供を行っています。個人情報保護法第28条第2項
+            および同法施行規則第17条第2項に基づき、以下の情報を提供します。
           </p>
           <div className="mt-2 space-y-2">
             <div>

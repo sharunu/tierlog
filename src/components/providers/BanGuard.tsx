@@ -6,6 +6,11 @@ import { createClient } from "@/lib/supabase/client";
 import { getUserStage } from "@/lib/actions/account-actions";
 import { Ban } from "lucide-react";
 
+// BanGuard を bypass する公開ページ。
+// - /auth: ログイン画面 (未認証ユーザーの導線)
+// - /terms, /privacy: 法務文書 (ログイン不要の閲覧)
+// - /contact: ログイン不要の問い合わせ窓口 (ban されたユーザーも到達できる必要あり)
+// - /share: 共有 OG ページ (匿名アクセス想定)
 const EXCLUDED_PATHS = ["/auth", "/terms", "/privacy", "/contact", "/share"];
 
 export function BanGuard({ children }: { children: React.ReactNode }) {
