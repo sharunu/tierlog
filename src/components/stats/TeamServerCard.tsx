@@ -22,6 +22,9 @@ export function TeamServerCard({ teams, activeTeamId, onTeamSelect, members, sel
         <p className="text-[11px] text-muted-foreground mb-1.5">Discordサーバー</p>
         <div className="flex items-center gap-3">
           {activeTeam?.icon_url ? (
+            // Discord CDN の外部小サイズアイコン。Cloudflare Workers + OpenNext 環境では
+            // next/image の Image Optimization が使えないため、<img> のまま運用する。
+            // eslint-disable-next-line @next/next/no-img-element
             <img src={activeTeam.icon_url} alt="" className="w-8 h-8 rounded-full object-cover flex-shrink-0" />
           ) : (
             <div className="w-8 h-8 rounded-full bg-muted/30 flex items-center justify-center text-xs font-medium text-muted-foreground flex-shrink-0">

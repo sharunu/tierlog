@@ -245,6 +245,10 @@ export function ShareModal({ type, data, onClose }: Props) {
             </div>
           ) : imageUrl ? (
             <div className="rounded-lg overflow-hidden">
+              {/* OG 画像 preview。dynamic URL (Supabase Storage / next-og API) で
+                  next/image の remotePatterns 列挙が困難。Cloudflare Workers + OpenNext
+                  環境でも next/image の Image Optimization は使えないため <img> のまま。 */}
+              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={imageUrl}
                 alt="シェア画像プレビュー"

@@ -36,6 +36,9 @@ export function AdminUserHome({ userId }: { userId: string }) {
               <div key={team.team_id}>
                 <div className="flex items-center gap-2 mb-1">
                   {team.icon_url ? (
+                    // Discord CDN の外部小サイズアイコン。Cloudflare Workers + OpenNext 環境では
+                    // next/image の Image Optimization が使えないため、<img> のまま運用する。
+                    // eslint-disable-next-line @next/next/no-img-element
                     <img src={team.icon_url} alt="" className="w-5 h-5 rounded-full object-cover" />
                   ) : (
                     <div className="w-5 h-5 rounded-full bg-muted/30 flex items-center justify-center text-[10px] text-muted-foreground">
