@@ -50,6 +50,9 @@ function StatsPageInner() {
 
   // Safety: reset premiumFilter when admin hides UI
   useEffect(() => {
+    // admin が premium UI を隠した時、ユーザーが有効化していた premiumFilter を
+    // 強制 off にするガード。外部状態 (premiumUiVisible) に応じた同期 setState。
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!premiumUiVisible) setPremiumFilter(false);
   }, [premiumUiVisible]);
   const [isGuest, setIsGuest] = useState(false);
@@ -99,6 +102,8 @@ function StatsPageInner() {
     if (activeVisibleTeamId) {
       getTeamMembers(activeVisibleTeamId).then(setTeamMembers);
     } else {
+      // activeVisibleTeamId が null になった時の同期 reset。effect 内 setState が必要。
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTeamMembers([]);
     }
   }, [activeVisibleTeamId]);
@@ -106,13 +111,19 @@ function StatsPageInner() {
   // Discordタブ内でもサーバーを選べるよう、未選択時は最初の共有中サーバーを仮選択する
   useEffect(() => {
     if (scope !== "team" || !teamReady || visibleTeams.length === 0 || activeVisibleTeamId) return;
+    // scope=team で未選択時、外部状態 (visibleTeams) から最初の共有中サーバーを仮選択する。
+    // 外部状態に応じた同期 setState のため effect 内が必要。
+    /* eslint-disable react-hooks/set-state-in-effect */
     setActiveTeamId(visibleTeams[0].id);
     setSelectedMemberId(null);
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [scope, teamReady, visibleTeams, activeVisibleTeamId, setActiveTeamId]);
 
   // Reset selectedMemberId when scope changes away from team
   useEffect(() => {
     if (scope !== "team") {
+      // scope が team から離れた時の同期 reset。effect 内 setState が必要。
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedMemberId(null);
     }
   }, [scope]);
@@ -223,6 +234,9 @@ function StatsPageInner() {
   }, [format, ready]);
 
   useEffect(() => {
+    // loadData は useCallback ラップ済で内部で fetch 結果を state に反映する。
+    // 外部状態 (format/startDate/endDate/scope 等) 変化時に再 fetch するための effect 内呼び出し。
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
   }, [loadData]);
 
