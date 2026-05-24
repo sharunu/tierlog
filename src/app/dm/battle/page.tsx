@@ -139,6 +139,8 @@ function BattlePageInner() {
   }, [loadInputData]);
 
   useEffect(() => {
+    // loadHistory は useCallback ラップ済で内部で setState 経由 fetch 反映。
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadHistory();
   }, [loadHistory]);
 
@@ -148,6 +150,8 @@ function BattlePageInner() {
   }, [loadCounts]);
 
   useEffect(() => {
+    // format 変化時に selectedDeck を同期 reset。
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedDeck(null);
   }, [format]);
 

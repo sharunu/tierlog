@@ -41,6 +41,8 @@ export default function AuthConfirmPage() {
       const params = new URLSearchParams(hash.substring(1));
       const errorDesc = params.get("error_description");
       errorSetRef.current = true;
+      // URL hash fragment から error params を検出して error state に反映。
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError(errorDesc
         ? "リンクが無効または期限切れです。もう一度パスワードリセットをお試しください。"
         : "エラーが発生しました。");
