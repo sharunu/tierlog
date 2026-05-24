@@ -21,8 +21,12 @@ export function AdminUserDecks({ userId, format, game = DEFAULT_GAME }: Props) {
   const [expandedDeck, setExpandedDeck] = useState<string | null>(null);
 
   useEffect(() => {
+    // userId/format/game 変化時に loading + error を同期 reset して再 fetch。
+    // 同 effect 内に複数 setState のため block disable で抑制。
+    /* eslint-disable react-hooks/set-state-in-effect */
     setLoading(true);
     setError(null);
+    /* eslint-enable react-hooks/set-state-in-effect */
     getAdminUserDecks(userId, format, game).then((data) => {
       setDecks(data as Deck[]);
       setLoading(false);

@@ -62,6 +62,9 @@ function DetectionPageInner() {
     setLoading(false);
   }, [showResolved, selectedGame]);
 
+  // loadData は useCallback ラップ済で内部で setState 経由 fetch 反映。外部状態
+  // (showResolved/selectedGame) 変化時の effect 内呼び出しが必要。
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadData(); }, [loadData]);
 
   const handleResolve = async (alertId: string) => {

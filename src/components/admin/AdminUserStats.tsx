@@ -117,6 +117,9 @@ export function AdminUserStats({ userId, format, game = DEFAULT_GAME }: Props) {
     getAdminUserDailyBattleCounts(userId, format, year, month, game).then(setBattleCounts);
   }, [userId, format, game]);
 
+  // loadData は useCallback ラップ済で内部で setState 経由 fetch 反映。
+  // 外部状態 (userId/format/startDate/endDate/view/game) 変化時の effect 内呼び出し。
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { loadData(); }, [loadData]);
   useEffect(() => {
     const now = new Date();
