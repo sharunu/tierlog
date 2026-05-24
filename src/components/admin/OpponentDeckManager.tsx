@@ -295,6 +295,10 @@ export function OpponentDeckManager({
 
   // Sync with initialSettings/initialDecks when format changes
   useEffect(() => {
+    // format 切替で props (initialDecks/initialSettings) が変化した時、編集中の
+    // 全 state を一斉に initial 値へ同期リセットする。effect 内に十数個の setState が
+    // 連続するため、ブロック単位で disable する。
+    /* eslint-disable react-hooks/set-state-in-effect */
     const m = (initialSettings?.management_mode as Mode) ?? "admin";
     setMode(m);
     setDecks(initialDecks);
@@ -315,6 +319,7 @@ export function OpponentDeckManager({
     savedDecksRef.current = initialDecks;
     setSavedSettings(initialSettings);
     savedStatsDecksRef.current = [];
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [initialDecks, initialSettings]);
 
   const loadStats = useCallback(async () => {
@@ -333,6 +338,9 @@ export function OpponentDeckManager({
   // Load stats when switching to auto mode
   useEffect(() => {
     if (mode === "auto" && !statsLoaded) {
+      // loadStats は useCallback ラップ済で内部で setState 経由 fetch 反映。
+      // mode=auto に切替時に statsLoaded フラグを true 化する。
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       loadStats();
     }
   }, [mode, statsLoaded, loadStats]);

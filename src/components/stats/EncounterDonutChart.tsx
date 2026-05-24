@@ -64,6 +64,8 @@ export function EncounterDonutChart({ items, otherBreakdown, overallWinRate, ove
 
   useEffect(() => { activeIndexRef.current = activeIndex; }, [activeIndex]);
 
+  // items (props) 変化時に「その他」を畳んだ状態へ同期 reset。
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setOtherExpanded(false); }, [items]);
 
   const data = useMemo(() =>
