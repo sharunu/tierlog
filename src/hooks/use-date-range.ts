@@ -68,9 +68,7 @@ export function useDateRange() {
     // 外部状態の同期は useEffect 内 setState が必要。set-state-in-effect rule を意図的に suppress する。
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setStartDateState(resolvedStart);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setEndDateState(resolvedEnd);
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setReady(true);
   }, [gameSlug, searchParams]);
 
