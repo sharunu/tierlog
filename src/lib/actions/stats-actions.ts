@@ -1,14 +1,25 @@
 import { createClient } from "@/lib/supabase/client";
 import { winRate } from "@/lib/battle/result-format";
 import type { Database } from "@/lib/supabase/database.types";
+import {
+  toN,
+  toWinRate,
+  mapDetailRow,
+  rowToDetail,
+  type DetailRpcRow,
+  type OpponentDetail,
+} from "@/lib/stats/transform";
+
+// 純関数 helper (toN / toWinRate / mapDetailRow / rowToDetail) と関連型は
+// src/lib/stats/transform.ts に抽出済 (#4-a refactor、2026-05-25)。
+// stats-actions.ts は DB I/O 層、transform.ts は純関数層として分離。
+// 循環依存防止のため src/lib/stats/ から src/lib/actions/ への import は禁止。
 
 // PR7 Phase 7b: 4 個人統計関数 (getPersonalStats / getDetailedPersonalStats /
 // getDeckDetailStats / getOpponentDeckDetailStats) は personal stats RPC 経由に切替済。
 //
 // 2026-05-13 types regen 後: supabase gen types で 6 personal stats RPC が型に乗ったため、
 // 自前の PersonalStatsRpcRow / DeckDetailOverallRpcRow 等は廃止し auto-gen 型を直接利用。
-// auto-gen は bigint → number / numeric → number として宣言するが、runtime では numeric が
-// string 化される可能性があるため toN / toWinRate で受けて Number() 変換 (安全側 wrap)。
 //
 // nullable args: function 側は p_start_date / p_end_date を IS NULL チェック付きで受けるが、
 // auto-gen は required string と判定する (DEFAULT NULL 明記なしのため)。call site で
@@ -19,55 +30,9 @@ type DateRangeArgs = {
   p_format: string;
 };
 
-// 詳細 RPC 系の共通 shape (mapDetailRow が受け取る形)
-type DetailRowBase = {
-  wins: number;
-  losses: number;
-  draws: number;
-  total: number;
-  win_rate: number;
-  first_wins: number;
-  first_losses: number;
-  first_draws: number;
-  first_total: number;
-  second_wins: number;
-  second_losses: number;
-  second_draws: number;
-  second_total: number;
-  unknown_wins: number;
-  unknown_losses: number;
-  unknown_draws: number;
-  unknown_total: number;
-};
-
-const toN = (v: number | string | null | undefined): number =>
-  v == null ? 0 : Number(v);
-
-const toWinRate = (v: number | string | null | undefined): number | null =>
-  v == null ? null : Number(v);
-
-const mapDetailRow = (r: DetailRowBase): OpponentDetail => ({
-  wins: toN(r.wins),
-  losses: toN(r.losses),
-  draws: toN(r.draws),
-  total: toN(r.total),
-  winRate: toWinRate(r.win_rate),
-  firstWins: toN(r.first_wins),
-  firstLosses: toN(r.first_losses),
-  firstDraws: toN(r.first_draws),
-  firstTotal: toN(r.first_total),
-  firstWinRate: winRate(toN(r.first_wins), toN(r.first_losses)),
-  secondWins: toN(r.second_wins),
-  secondLosses: toN(r.second_losses),
-  secondDraws: toN(r.second_draws),
-  secondTotal: toN(r.second_total),
-  secondWinRate: winRate(toN(r.second_wins), toN(r.second_losses)),
-  unknownWins: toN(r.unknown_wins),
-  unknownLosses: toN(r.unknown_losses),
-  unknownDraws: toN(r.unknown_draws),
-  unknownTotal: toN(r.unknown_total),
-  unknownWinRate: winRate(toN(r.unknown_wins), toN(r.unknown_losses)),
-});
+// 外部 (components / admin-actions) からの import 互換のため re-export。
+// src/lib/stats/transform.ts が真の定義先。
+export type { OpponentDetail };
 
 export async function getPersonalStats(format: string = "ND") {
   const supabase = createClient();
@@ -122,28 +87,6 @@ export async function getEnvironmentSharesByRange(startDate: string, endDate: st
   return (data as { deck_name: string; battle_count: number; share_pct: number }[]) ?? [];
 }
 
-export type OpponentDetail = {
-  wins: number;
-  losses: number;
-  draws: number;
-  total: number;
-  winRate: number | null;
-  firstWins: number;
-  firstLosses: number;
-  firstDraws: number;
-  firstTotal: number;
-  firstWinRate: number | null;
-  secondWins: number;
-  secondLosses: number;
-  secondDraws: number;
-  secondTotal: number;
-  secondWinRate: number | null;
-  unknownWins: number;
-  unknownLosses: number;
-  unknownDraws: number;
-  unknownTotal: number;
-  unknownWinRate: number | null;
-};
 
 export type MyDeckStats = {
   wins: number;
@@ -545,28 +488,6 @@ export async function getDeckTrendByRange(
   }));
 }
 
-type DetailRpcRow = {
-  opponent_name?: string;
-  my_deck_name?: string;
-  wins: number; losses: number; draws: number | null; total: number;
-  first_wins: number; first_losses: number; first_draws: number | null; first_total: number;
-  second_wins: number; second_losses: number; second_draws: number | null; second_total: number;
-  unknown_wins: number; unknown_losses: number; unknown_draws: number | null; unknown_total: number;
-  tuning_name?: string;
-};
-
-const rowToDetail = (r: DetailRpcRow): OpponentDetail => {
-  const w = Number(r.wins); const l = Number(r.losses); const d = Number(r.draws ?? 0); const t = Number(r.total);
-  const fw = Number(r.first_wins); const fl = Number(r.first_losses); const fd = Number(r.first_draws ?? 0); const ft = Number(r.first_total);
-  const sw = Number(r.second_wins); const sl = Number(r.second_losses); const sd = Number(r.second_draws ?? 0); const st = Number(r.second_total);
-  const uw = Number(r.unknown_wins); const ul = Number(r.unknown_losses); const ud = Number(r.unknown_draws ?? 0); const ut = Number(r.unknown_total);
-  return {
-    wins: w, losses: l, draws: d, total: t, winRate: winRate(w, l),
-    firstWins: fw, firstLosses: fl, firstDraws: fd, firstTotal: ft, firstWinRate: winRate(fw, fl),
-    secondWins: sw, secondLosses: sl, secondDraws: sd, secondTotal: st, secondWinRate: winRate(sw, sl),
-    unknownWins: uw, unknownLosses: ul, unknownDraws: ud, unknownTotal: ut, unknownWinRate: winRate(uw, ul),
-  };
-};
 
 export async function getGlobalDeckDetailStats(
   deckName: string,
