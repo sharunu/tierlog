@@ -583,3 +583,57 @@ review-plan-loop の judgment escalate でユーザーが確定した方針:
 - [問い合わせ窓口] #1+#2 の問い合わせ窓口の形式は？ → **メール公開（`contact@tierlog.app` 新設）**。privacy / terms / contact に `contact@tierlog.app` を記載。Cloudflare Email Routing の設定手順は別途案内（受信専用・無料・既存 MX と排他なので事前確認）
 - [管轄裁判所] #1+#2 の terms の専属的合意管轄裁判所は？ → **東京地方裁判所**。「東京地方裁判所を第一審の専属的合意管轄裁判所とします」の表現で統一
 - [専門家確認] #1+#2 の法務文言の専門家確認 (弁護士等) のタイミングは？ → **一次案で公開し、公開後に専門家確認**。今回は PPC ガイドライン等の公式資料ベースで一次案を整える範囲とし、文中 / 完了報告で「最終的な法的判断ではなく、公開後に専門家確認予定」と明記
+- [Sentry アカウント] #6-b で Sentry を導入するための organization/project は？ → **新規アカウントを作成**（Developer Free 想定）。Sentry signup → organization `tierlog` → Next.js project `tierlog-web` 等を作成し、DSN を発行する。手順は本 plan 末尾の §Sentry セットアップ手順 を参照
+- [Sentry 通知先] Sentry alert の通知先は？ → **メールのみ**（Sentry default）。Discord webhook 等の追加は、エラー量・運用負荷を見て後続改善で検討
+- [Sentry env 分離] dev/staging と prod で Sentry プロジェクトを分けるか？ → **prod のみで始める**。初期運用は production project / production DSN のみを正式設定し、dev/staging では Sentry を通常無効化。dev 検証が必要な場合だけ一時的に DSN を入れ、検証後に無効化する運用
+- [Sentry sourcemap] sourcemap upload は導入するか？ → **初期は無効**。OpenNext 側 issue #19213 で完全 mapping 不可と明示されているため、SENTRY_AUTH_TOKEN 等の Cloudflare Build secret も追加しない。まず production の error 収集・メール通知・runbook 整備を優先し、sourcemap は後続改善として残す
+
+---
+
+## Sentry セットアップ手順（ユーザー側で実施、#6-b 着手前の前提）
+
+公式 docs（取得日 2026-05-25）に基づくアカウント新規作成から DSN を Cloudflare Build variables へ登録するまでの 15 ステップ。
+
+### 参照 docs
+
+- https://sentry.io/signup/
+- https://docs.sentry.io/product/sentry-basics/integrate-frontend/create-new-project/
+- https://docs.sentry.io/concepts/key-terms/dsn-explainer/
+- https://docs.sentry.io/platforms/javascript/guides/cloudflare/frameworks/nextjs/
+
+### 手順
+
+1. `https://sentry.io/signup/` を開く
+2. Google / GitHub アカウントで SSO サインアップ（メール + パスワードでも可）
+3. フォームで Name と **Organization 名**（例: `tierlog`）を入力
+4. **Data Storage Location** は **US** を選択（Cloudflare / Supabase と整合）
+5. signup 直後は 14 日 Business トライアル状態。トライアル中でも free tier 相当で使えるが、14 日後または明示切替で **Developer (Free)** プランに切り替える（Settings → Billing から実施可能）
+6. メール認証リンクをクリックして verify
+7. 左サイドメニューから **Projects** → **Create Project** をクリック
+8. Platform 一覧で **Next.js** を選択
+9. Alert frequency は **"Alert me on high priority issues"** を選択
+10. Project name に `tierlog-web` 等を入力（slug 自動生成）→ **Create Project**
+11. 作成完了画面に表示される **DSN**（`https://xxx@oNNN.ingest.sentry.io/PPP` 形式）をコピー
+12. （後から確認する場合）**Settings → Projects → tierlog-web → Client Keys (DSN)** から再取得可
+13. **右上アカウントメニュー → User Settings → Notifications** で email 通知が ON か確認（デフォルトは ON）
+14. Cloudflare Dashboard → Workers & Pages → duepure-tracker → Settings → **Build variables and secrets** に以下を追加（`NEXT_PUBLIC_*` は build 時 inline 必須）:
+    - 変数名: `NEXT_PUBLIC_SENTRY_DSN`
+    - 値: 手順 11 でコピーした DSN
+    - タイプ: Plaintext（DSN は public 値なので Secret 化不要）
+15. Cloudflare Dashboard で **Save** のみ実行（Deploy は押さない — CLAUDE.md の事故防止ルール参照）
+
+### sourcemap 用 token（今回は不要、後続改善時）
+
+将来 sourcemap upload を有効化する場合に必要:
+- Sentry → **Settings → Developer Settings → Organization Tokens → Create New Token**
+- scope: `project:write` / `project:releases`
+- token を Cloudflare Build secret として `SENTRY_AUTH_TOKEN` に登録、加えて `SENTRY_ORG` / `SENTRY_PROJECT` も Build variables に追加
+
+### dev/staging で一時的に Sentry を有効化したい場合
+
+- Cloudflare Build variables に `STAGING_NEXT_PUBLIC_SENTRY_DSN` を追加し、`prepare-cloudflare-env.sh` で `WORKERS_CI_BRANCH=dev` 時に写すパターンに従う
+- ただし通常は無効化運用（Resolved Decisions [Sentry env 分離] 参照）。dev 検証完了後は `STAGING_NEXT_PUBLIC_SENTRY_DSN` を空にする or 削除する
+
+### この plan のステータス
+
+ユーザーが上記 15 ステップを完了し DSN が Cloudflare Build variables に登録された時点で、#6-b 本実装に着手可能になる。本実装の手順は spike report `docs/reports/2026-05-24_sentry_opennext_spike.md` §13-C 参照。

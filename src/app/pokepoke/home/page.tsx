@@ -83,7 +83,7 @@ function HomePageInner() {
 
   useEffect(() => {
     // loadData は useCallback ラップ済で内部で setState 経由 fetch 反映。
-    // eslint-disable-next-line react-hooks/set-state-in-effect
+
     loadData();
   }, [loadData]);
 
