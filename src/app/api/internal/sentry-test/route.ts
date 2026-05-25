@@ -1,15 +1,17 @@
 // Sentry 動作検証用の管理者専用 endpoint (Phase 4 一時 endpoint)
 //
 // 用途:
-// Custom Worker (src/sentry-worker.ts) の Sentry.withSentry は worker handler
-// レベルの wrap だが、Next.js が API route handler の throw を catch して 500
-// Response に変換するため、Worker レベルでは unhandled exception にならず、
-// withSentry の自動捕捉が効かないと判明 (Phase 4 検証 1 回目で確認済)。
+// Phase 4 検証 2 回目の結果、Sentry.captureException + flush でも Sentry Dashboard に
+// イベントが届かないことが確認された。原因を切り分けるため、throw を一旦やめて
+// Sentry SDK の状態を JSON で返す診断モードに変更する。
 //
-// よって明示的に Sentry.captureException + Sentry.flush で送出する。これは
-// Sentry 公式 (https://docs.sentry.io/platforms/javascript/guides/cloudflare/
-// usage/) の推奨パターンで、Cloudflare Workers の短命な lifecycle で SDK が
-// イベントを送り終える前に worker が exit するのを防ぐため flush が必須。
+// 確認したい論点:
+// 1. env.SENTRY_DSN が Custom Worker 経由で Next.js handler に届いているか
+//    (Cloudflare Runtime variable → src/sentry-worker.ts → .open-next/worker.js → Next.js handler の経路)
+// 2. Sentry.getClient() が hub を返すか
+//    (withSentry の context が AsyncLocalStorage 経由で Next.js handler 内まで伝播しているか)
+// 3. captureException の戻り値 (event_id) が取得できるか
+// 4. flush の戻り値 (true/false) で送信完了状況がわかるか
 //
 // 安全条件 (plan §4-4 #6-b):
 // - INTERNAL_API_KEY (X-Internal-Key header) で保護
@@ -23,6 +25,17 @@ import { NextRequest, NextResponse } from "next/server";
 import * as Sentry from "@sentry/cloudflare";
 import { getServerEnv } from "@/lib/cf-env";
 
+interface SentryDiagnostics {
+  timestamp: string;
+  runtime: "node-compat" | "edge" | "unknown";
+  has_sentry_dsn_env: boolean;
+  sentry_dsn_prefix: string | null;
+  has_sentry_client: boolean;
+  sentry_client_dsn_host: string | null;
+  captured_event_id: string | null;
+  flush_result: boolean | "no_client";
+}
+
 export async function GET(request: NextRequest) {
   const internalKey = request.headers.get("X-Internal-Key");
   const expectedKey = await getServerEnv("INTERNAL_API_KEY");
@@ -31,15 +44,38 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const error = new Error(
-    "Sentry test throw from /api/internal/sentry-test (manual verification, 2026-05-25)"
-  );
+  // 1. SENTRY_DSN が Next.js handler から見えるか (getServerEnv 経由)
+  const sentryDsn = await getServerEnv("SENTRY_DSN");
 
-  // 明示的に Sentry に送出し、flush で送信完了を待ってから throw する。
-  // Cloudflare Workers では request lifecycle が短いため、flush なしだと
-  // イベント送信が完了する前に worker が exit してイベントが Sentry に届かない。
-  Sentry.captureException(error);
-  await Sentry.flush(2000);
+  // 2. Sentry hub が確立されているか (withSentry の context 伝播確認)
+  const client = Sentry.getClient();
+  const clientDsn = client?.getDsn?.();
 
-  throw error;
+  // 3-4. captureException + flush の戻り値で動作を確認
+  let capturedEventId: string | null = null;
+  let flushResult: boolean | "no_client" = "no_client";
+  if (client) {
+    const error = new Error("Sentry diagnostic test 2026-05-25 (no throw, JSON return)");
+    const eventId = Sentry.captureException(error);
+    capturedEventId = typeof eventId === "string" ? eventId : null;
+    flushResult = await Sentry.flush(3000);
+  }
+
+  const diagnostics: SentryDiagnostics = {
+    timestamp: new Date().toISOString(),
+    runtime:
+      typeof process !== "undefined" && process.env?.NEXT_RUNTIME === "edge"
+        ? "edge"
+        : typeof process !== "undefined"
+        ? "node-compat"
+        : "unknown",
+    has_sentry_dsn_env: !!sentryDsn,
+    sentry_dsn_prefix: sentryDsn ? sentryDsn.slice(0, 12) + "...(masked)" : null,
+    has_sentry_client: !!client,
+    sentry_client_dsn_host: clientDsn?.host ?? null,
+    captured_event_id: capturedEventId,
+    flush_result: flushResult,
+  };
+
+  return NextResponse.json(diagnostics);
 }
