@@ -7,6 +7,8 @@
     "build": ". ./scripts/prepare-cloudflare-env.sh && next build",
     "start": "next start",
     "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "preview": ". ./scripts/prepare-cloudflare-env.sh && opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": ". ./scripts/prepare-cloudflare-env.sh && opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "cf-typegen": "wrangler types --env-interface CloudflareEnv cloudflare-env.d.ts",
@@ -39,6 +41,7 @@
     "eslint-config-next": "16.2.6",
     "tailwindcss": "^4",
     "typescript": "^5",
+    "vitest": "^4.1.7",
     "wrangler": "4.90.0"
   },
   "overrides": {
