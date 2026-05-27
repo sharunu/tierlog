@@ -157,6 +157,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       images: [ogImageUrl],
     },
+    // Plan B RD-B5: 個人戦績スクショは検索結果に出さないが、SNS シェア OG は維持する。
+    // 共有ページから /{game}/home などへの内部リンクはクロール可能 (follow: true)。
+    robots: { index: false, follow: true },
   };
 }
 
