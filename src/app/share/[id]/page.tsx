@@ -1,12 +1,15 @@
 import { Metadata } from "next";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getGameMetaBySlug, normalizeGameTitle } from "@/lib/games/server";
 import { APP_BRAND } from "@/lib/games";
 import { getServerEnv } from "@/lib/cf-env";
-import { sanitizeShareImageUrl } from "@/lib/share/image-url";
+import {
+  sanitizeShareImageUrl,
+  normalizeSupabaseStoragePrefix,
+} from "@/lib/share/image-url";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -16,6 +19,11 @@ type ShareRow = {
   image_url: string | null;
   game_title: string | null;
   user_id: string;
+};
+
+type LoadedShare = {
+  share: ShareRow;
+  allowedPrefixes: string[];
 };
 
 async function resolveAppUrl(): Promise<string> {
@@ -28,24 +36,49 @@ async function resolveAppUrl(): Promise<string> {
   return process.env.NEXT_PUBLIC_APP_URL ?? "";
 }
 
-function getAllowedStoragePrefix(): string | null {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  if (!supabaseUrl) return null;
-  return `${supabaseUrl}/storage/v1/object/public/share-images/`;
+// DB の app_settings.storage_public_url_prefix を読む。service_role は同テーブルへの
+// SELECT/INSERT/UPDATE/DELETE を grant 済 (migration 20260515000001)。
+// migration 未適用などで行が存在しない場合は null を返し、env 由来 fallback に任せる。
+async function loadStoragePublicUrlPrefix(
+  supabase: SupabaseClient
+): Promise<string | null> {
+  try {
+    const { data } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "storage_public_url_prefix")
+      .maybeSingle();
+    const raw = (data as { value?: unknown } | null)?.value;
+    if (typeof raw === "string" && raw.length > 0) return raw;
+  } catch {
+    // ignore: env fallback に任せる
+  }
+  return null;
 }
 
-function resolveOgImageUrl(share: ShareRow, appUrl: string, id: string): string {
-  const allowedPrefix = getAllowedStoragePrefix();
-  const safe = allowedPrefix
-    ? sanitizeShareImageUrl(share.image_url, {
-        allowedPrefix,
-        shareUserId: share.user_id,
-      })
-    : null;
+async function resolveAllowedPrefixes(supabase: SupabaseClient): Promise<string[]> {
+  const dbPrefix = await loadStoragePublicUrlPrefix(supabase);
+  const envPrefix = normalizeSupabaseStoragePrefix(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const prefixes: string[] = [];
+  if (dbPrefix) prefixes.push(dbPrefix);
+  if (envPrefix && envPrefix !== dbPrefix) prefixes.push(envPrefix);
+  return prefixes;
+}
+
+function resolveOgImageUrl(
+  share: ShareRow,
+  allowedPrefixes: string[],
+  appUrl: string,
+  id: string
+): string {
+  const safe = sanitizeShareImageUrl(share.image_url, {
+    allowedPrefixes,
+    shareUserId: share.user_id,
+  });
   return safe ?? `${appUrl}/api/og/${id}`;
 }
 
-async function loadShare(id: string): Promise<ShareRow | null> {
+async function loadShare(id: string): Promise<LoadedShare | null> {
   const serviceRoleKey = await getServerEnv("SUPABASE_SERVICE_ROLE_KEY");
   if (!serviceRoleKey) return null;
   const supabase = createClient(
@@ -58,7 +91,15 @@ async function loadShare(id: string): Promise<ShareRow | null> {
     .select("share_type, share_data, image_url, game_title, user_id")
     .eq("id", id)
     .single();
-  return (data as ShareRow | null) ?? null;
+  const share = (data as ShareRow | null) ?? null;
+  if (!share) return null;
+
+  // app_settings.storage_public_url_prefix を一次正として読み、
+  // NEXT_PUBLIC_SUPABASE_URL 由来の正規化 prefix を二次 fallback に積む。
+  // production code deploy → production migration 未適用時間帯では DB 行が無いため
+  // env fallback だけで safe URL を表示できるようにしておく。
+  const allowedPrefixes = await resolveAllowedPrefixes(supabase);
+  return { share, allowedPrefixes };
 }
 
 function buildTitleAndDescription(share: ShareRow): { title: string; description: string } {
@@ -90,14 +131,15 @@ function buildTitleAndDescription(share: ShareRow): { title: string; description
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
-  const share = await loadShare(id);
+  const loaded = await loadShare(id);
 
-  if (!share) {
+  if (!loaded) {
     return { title: APP_BRAND.name };
   }
 
+  const { share, allowedPrefixes } = loaded;
   const appUrl = await resolveAppUrl();
-  const ogImageUrl = resolveOgImageUrl(share, appUrl, id);
+  const ogImageUrl = resolveOgImageUrl(share, allowedPrefixes, appUrl, id);
   const gameMeta = getGameMetaBySlug(share.game_title);
   const { title, description } = buildTitleAndDescription(share);
 
@@ -120,14 +162,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
 export default async function SharePage({ params }: Props) {
   const { id } = await params;
-  const share = await loadShare(id);
+  const loaded = await loadShare(id);
 
-  if (!share) {
+  if (!loaded) {
     notFound();
   }
 
+  const { share, allowedPrefixes } = loaded;
   const appUrl = await resolveAppUrl();
-  const ogImageUrl = resolveOgImageUrl(share, appUrl, id);
+  const ogImageUrl = resolveOgImageUrl(share, allowedPrefixes, appUrl, id);
   const gameSlug = normalizeGameTitle(share.game_title);
   const gameMeta = getGameMetaBySlug(gameSlug);
   const { title, description } = buildTitleAndDescription(share);

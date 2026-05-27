@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
-import { sanitizeShareImageUrl } from "./image-url";
+import {
+  sanitizeShareImageUrl,
+  normalizeSupabaseStoragePrefix,
+} from "./image-url";
 
 const PREFIX = "https://example.supabase.co/storage/v1/object/public/share-images/";
 const USER_ID = "11111111-1111-1111-1111-111111111111";
@@ -73,5 +76,127 @@ describe("sanitizeShareImageUrl", () => {
   it("accepts nested paths under the user_id folder", () => {
     const nested = `${PREFIX}${USER_ID}/2026/05/abc.png`;
     expect(sanitizeShareImageUrl(nested, { allowedPrefix: PREFIX, shareUserId: USER_ID })).toBe(nested);
+  });
+});
+
+describe("sanitizeShareImageUrl with allowedPrefixes (multiple candidates)", () => {
+  const OTHER_PREFIX =
+    "https://other.supabase.co/storage/v1/object/public/share-images/";
+
+  it("accepts URL matching the first prefix", () => {
+    const ok = `${PREFIX}${USER_ID}/abc.png`;
+    expect(
+      sanitizeShareImageUrl(ok, {
+        allowedPrefixes: [PREFIX, OTHER_PREFIX],
+        shareUserId: USER_ID,
+      })
+    ).toBe(ok);
+  });
+
+  it("accepts URL matching the second prefix when the first does not match", () => {
+    const ok = `${OTHER_PREFIX}${USER_ID}/abc.png`;
+    expect(
+      sanitizeShareImageUrl(ok, {
+        allowedPrefixes: [PREFIX, OTHER_PREFIX],
+        shareUserId: USER_ID,
+      })
+    ).toBe(ok);
+  });
+
+  it("rejects when no prefix in the list matches", () => {
+    const url = `${PREFIX}${USER_ID}/abc.png`;
+    expect(
+      sanitizeShareImageUrl(url, {
+        allowedPrefixes: ["https://nope.example/x/", OTHER_PREFIX],
+        shareUserId: USER_ID,
+      })
+    ).toBeNull();
+  });
+
+  it("ignores null / undefined / empty entries in allowedPrefixes", () => {
+    const ok = `${PREFIX}${USER_ID}/abc.png`;
+    expect(
+      sanitizeShareImageUrl(ok, {
+        allowedPrefixes: [null, undefined, "", PREFIX],
+        shareUserId: USER_ID,
+      })
+    ).toBe(ok);
+  });
+
+  it("returns null when allowedPrefixes is an empty array", () => {
+    const ok = `${PREFIX}${USER_ID}/abc.png`;
+    expect(
+      sanitizeShareImageUrl(ok, {
+        allowedPrefixes: [],
+        shareUserId: USER_ID,
+      })
+    ).toBeNull();
+  });
+
+  it("still rejects external URL even with multiple allowed prefixes", () => {
+    expect(
+      sanitizeShareImageUrl("https://malicious.example/track.png", {
+        allowedPrefixes: [PREFIX, OTHER_PREFIX],
+        shareUserId: USER_ID,
+      })
+    ).toBeNull();
+  });
+});
+
+describe("normalizeSupabaseStoragePrefix", () => {
+  it("appends share-images path for a clean Supabase URL", () => {
+    expect(normalizeSupabaseStoragePrefix("https://example.supabase.co")).toBe(
+      "https://example.supabase.co/storage/v1/object/public/share-images/"
+    );
+  });
+
+  it("strips a single trailing slash", () => {
+    expect(normalizeSupabaseStoragePrefix("https://example.supabase.co/")).toBe(
+      "https://example.supabase.co/storage/v1/object/public/share-images/"
+    );
+  });
+
+  it("strips multiple trailing slashes (no double-slash artifact)", () => {
+    expect(normalizeSupabaseStoragePrefix("https://example.supabase.co///")).toBe(
+      "https://example.supabase.co/storage/v1/object/public/share-images/"
+    );
+  });
+
+  it("returns null for null / undefined / empty / non-string", () => {
+    expect(normalizeSupabaseStoragePrefix(null)).toBeNull();
+    expect(normalizeSupabaseStoragePrefix(undefined)).toBeNull();
+    expect(normalizeSupabaseStoragePrefix("")).toBeNull();
+  });
+});
+
+describe("trailing slash regression: env-derived prefix must still accept safe URLs", () => {
+  // 回帰: 2026-05-27 dev preview で staging share の og:image が
+  // /api/og fallback になっていた現象。NEXT_PUBLIC_SUPABASE_URL に
+  // trailing slash があると `${url}/storage/...` で double slash になり
+  // sanitizer の prefix 一致が失敗していた。
+  it("accepts safe URL when NEXT_PUBLIC_SUPABASE_URL has a trailing slash", () => {
+    const envWithTrailingSlash = "https://example.supabase.co/";
+    const allowedPrefix = normalizeSupabaseStoragePrefix(envWithTrailingSlash);
+    expect(allowedPrefix).toBe(PREFIX);
+
+    const safeUrl = `${PREFIX}${USER_ID}/abc.png`;
+    expect(
+      sanitizeShareImageUrl(safeUrl, {
+        allowedPrefix: allowedPrefix!,
+        shareUserId: USER_ID,
+      })
+    ).toBe(safeUrl);
+  });
+
+  it("accepts safe URL via allowedPrefixes when env is normalized alongside a DB prefix", () => {
+    const dbPrefix = PREFIX;
+    const envPrefix = normalizeSupabaseStoragePrefix("https://example.supabase.co///");
+    const safeUrl = `${dbPrefix}${USER_ID}/abc.png`;
+    expect(
+      sanitizeShareImageUrl(safeUrl, {
+        allowedPrefixes: [dbPrefix, envPrefix],
+        shareUserId: USER_ID,
+      })
+    ).toBe(safeUrl);
   });
 });
