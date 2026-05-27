@@ -48,9 +48,11 @@ export const metadata: Metadata = {
     email: false,
     address: false,
   },
+  // 本番 build では robots を未指定 (default index、meta 不在) にする。
+  // Codex 第 6 回期待値「本番 / に header / meta なし」を厳密に満たすため。
   robots: IS_STAGING_BUILD
     ? { index: false, follow: false, noarchive: true }
-    : { index: true, follow: true },
+    : undefined,
   openGraph: {
     type: "website",
     locale: "ja_JP",
