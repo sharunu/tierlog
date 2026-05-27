@@ -797,11 +797,14 @@ export async function getQualityScoreSnapshot(userId: string) {
   // Plan C C-5: quality_score_snapshots は (user_id, game_title) 複合キーになったため、
   // 全 game の snapshot から total_score 最大の row を返す (RD-C3 account-level MAX(score) と整合)。
   // 既存 UI shape (total_score / breakdown / calculated_at) は維持。per-game 表示は Phase 2 で。
+  // game_title ASC を secondary order として追加し、同点時の戻り値を安定化
+  // (DB wrapper の ARRAY['dm', 'pokepoke'] first-eligible 順 = ASC と一致させる、Codex 第 5 回)。
   const { data } = await supabase
     .from("quality_score_snapshots")
     .select("*")
     .eq("user_id", userId)
     .order("total_score", { ascending: false })
+    .order("game_title", { ascending: true })
     .limit(1);
   return data && data.length > 0 ? data[0] : null;
 }

@@ -182,11 +182,14 @@ export async function getMyQualityScore(): Promise<{
   // 自分の全 game snapshot から total_score 最大の row を返す (RD-C3 account-level MAX(score) と整合)。
   // 既存戻り値 shape (totalScore / breakdown) は維持。breakdown.max_score_game_title で
   // 最大値を出した game slug が参照可能 (per-game 表示拡張は Phase 2)。
+  // game_title ASC を secondary order として追加し、同点時の戻り値を安定化
+  // (DB wrapper の ARRAY['dm', 'pokepoke'] first-eligible 順 = ASC と一致させる、Codex 第 5 回)。
   const { data } = await supabase
     .from("quality_score_snapshots")
     .select("total_score, breakdown")
     .eq("user_id", user.id)
     .order("total_score", { ascending: false })
+    .order("game_title", { ascending: true })
     .limit(1);
   if (!data || data.length === 0) return null;
   const row = data[0];

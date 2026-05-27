@@ -314,9 +314,23 @@ REVOKE ALL ON FUNCTION public._calculate_quality_score_internal(uuid)
   FROM PUBLIC, anon, authenticated, service_role;
 
 -- =============================================================================
--- step 6: _run_quality_scoring_internal(p_auto_update) を
---   game × user 二重ループ + ON CONFLICT (user_id, game_title) UPSERT に変更
---   - stage 判定は user の全 game score の MAX(score) で実施 (RD-C3)
+-- step 6: _run_quality_scoring_internal(p_auto_update) を game × user 二重ループに変更
+--
+--   Codex 第 5 回反映:
+--   - v_max_score を NULL 初期化に変更し、wrapper 側と同じ first-eligible 方式で
+--     負値スコアも正しく MAX として扱う (`v_max_game_title IS NULL OR v_total > v_max_score`)。
+--     旧実装は v_max_score := 0 だったため、全 game の score が負値だと MAX(score) が
+--     0 として誤判定される問題があった。
+--   - **二段 loop** に変更:
+--       * 第 1 周: 各 game の (total_score, breakdown) を v_game_scores jsonb に蓄積し、
+--         v_max_score / v_max_game_title を確定する。
+--       * 第 2 周: v_game_scores を走査して snapshot を UPSERT。
+--         breakdown には **max_score / max_score_game_title を含めて** 保存し、
+--         runbook の `SELECT breakdown->>'max_score_game_title'` 検証が通る形にする。
+--   - v_game_titles は ASC 順 (`dm` → `pokepoke`) で記載 (RD-C2)。
+--     これは action 側 (`getMyQualityScore` / `getQualityScoreSnapshot`) の
+--     `.order("game_title", ascending: true)` tie-break と挙動を一致させる目的。
+--     新ゲーム追加時は ASC 順を維持すること (alphabetic sort で挿入)。
 -- =============================================================================
 
 CREATE OR REPLACE FUNCTION public._run_quality_scoring_internal(p_auto_update boolean DEFAULT true)
@@ -328,11 +342,17 @@ AS $$
 DECLARE
   v_user record;
   v_game_title text;
+  -- RD-C2: src/lib/games/index.ts の GAME_SLUGS と同期。
+  -- ASC 順で記載 (action 側 .order("game_title", asc) tie-break と一致させる目的)。
   v_game_titles text[] := ARRAY['dm', 'pokepoke'];
   v_result jsonb;
   v_total integer;
   v_threshold integer;
   v_max_score integer;
+  v_max_game_title text;
+  v_game_scores jsonb;          -- {game_title: {total_score, breakdown}}
+  v_game_score_entry jsonb;
+  v_breakdown_with_max jsonb;
   v_promoted integer := 0;
   v_demoted integer := 0;
   v_calculated integer := 0;
@@ -345,8 +365,12 @@ BEGIN
   FOR v_user IN
     SELECT id, stage FROM public.profiles WHERE is_guest = false
   LOOP
-    v_max_score := 0;
+    -- NULL 初期化 (Codex 第 5 回): 負値スコアも正しく first-eligible で MAX として扱う
+    v_max_score := NULL;
+    v_max_game_title := NULL;
+    v_game_scores := '{}'::jsonb;
 
+    -- 第 1 周: 各 game の score 計算 + max 追跡 (snapshot UPSERT はまだしない)
     FOREACH v_game_title IN ARRAY v_game_titles
     LOOP
       v_result := public._calculate_quality_score_internal(v_user.id, v_game_title);
@@ -354,25 +378,52 @@ BEGIN
       IF (v_result->>'eligible')::boolean THEN
         v_total := (v_result->>'total_score')::integer;
 
-        -- snapshot UPSERT (game 別)
-        INSERT INTO public.quality_score_snapshots (user_id, game_title, total_score, breakdown, calculated_at)
-        VALUES (v_user.id, v_game_title, v_total, v_result->'breakdown', now())
-        ON CONFLICT (user_id, game_title) DO UPDATE SET
-          total_score = EXCLUDED.total_score,
-          breakdown = EXCLUDED.breakdown,
-          calculated_at = EXCLUDED.calculated_at;
+        -- 第 2 周のために (total_score, breakdown) を蓄積
+        v_game_scores := v_game_scores || jsonb_build_object(
+          v_game_title,
+          jsonb_build_object(
+            'total_score', v_total,
+            'breakdown', v_result->'breakdown'
+          )
+        );
 
-        v_calculated := v_calculated + 1;
-
-        -- account-level の MAX(score) を追跡 (RD-C3)
-        IF v_total > v_max_score THEN
+        -- account-level の MAX(score) 追跡 (first-eligible or strictly greater)
+        IF v_max_game_title IS NULL OR v_total > v_max_score THEN
           v_max_score := v_total;
+          v_max_game_title := v_game_title;
         END IF;
       END IF;
     END LOOP;
 
-    -- ステージ自動遷移 (MAX(score) で判定)
-    IF p_auto_update THEN
+    -- 第 2 周: snapshot UPSERT (breakdown に max_score / max_score_game_title を含めて保存)
+    IF v_max_game_title IS NOT NULL THEN
+      FOREACH v_game_title IN ARRAY v_game_titles
+      LOOP
+        v_game_score_entry := v_game_scores -> v_game_title;
+        IF v_game_score_entry IS NOT NULL THEN
+          v_total := (v_game_score_entry->>'total_score')::integer;
+          v_breakdown_with_max := (v_game_score_entry->'breakdown')
+            || jsonb_build_object(
+              'max_score', v_max_score,
+              'max_score_game_title', v_max_game_title
+            );
+
+          INSERT INTO public.quality_score_snapshots
+            (user_id, game_title, total_score, breakdown, calculated_at)
+          VALUES
+            (v_user.id, v_game_title, v_total, v_breakdown_with_max, now())
+          ON CONFLICT (user_id, game_title) DO UPDATE SET
+            total_score = EXCLUDED.total_score,
+            breakdown = EXCLUDED.breakdown,
+            calculated_at = EXCLUDED.calculated_at;
+
+          v_calculated := v_calculated + 1;
+        END IF;
+      END LOOP;
+    END IF;
+
+    -- ステージ自動遷移 (MAX(score) で判定。v_max_score IS NULL は全 game ineligible のためスキップ)
+    IF p_auto_update AND v_max_score IS NOT NULL THEN
       IF v_max_score >= v_threshold AND v_user.stage = 2 THEN
         UPDATE public.profiles SET stage = 1 WHERE id = v_user.id;
         INSERT INTO public.user_stage_history (user_id, from_stage, to_stage, reason, changed_by)

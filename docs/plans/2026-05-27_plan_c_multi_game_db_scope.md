@@ -1124,3 +1124,21 @@ review-plan-loop 反復中にユーザー承認された判断事項を永続化
 - snapshot caller 修正方針が **「`.single()` 撤去 + 全件取得 + `total_score` 最大 row + 既存 UI shape 維持」** で確定し、admin UI / account UI への regression リスクが明確化。
 - pg_cron 前提が plan 全体で **「自動実行されうる正常運用」** として扱われ、「production 手動限定」断定表現が排除。
 - TRUNCATE 作業中の cron 競合回避手順が runbook 化される設計に確定。
+
+### Codex Review 第 5 回 (2026-05-28、実装 commit 後の追加レビュー)
+
+主要 3 点を実装側で反映 (本ターン、**新規 RD なし、`20260527000005` migration + actions の細部修正のみ**):
+
+| # | Codex 第 5 回指摘 | 反映先 | 反映内容 |
+|---|---|---|---|
+| 1 | `_run_quality_scoring_internal` の `v_max_score := 0` 初期化問題 (全 game の score が負値なら MAX(score) が 0 に張り付く、RD-C3 に反する) | `supabase/migrations/20260527000005_c4_c5_quality_scoring_game_scope.sql` step 6 | `v_max_score` / `v_max_game_title` を **NULL 初期化** に変更し、wrapper と同じ `v_max_game_title IS NULL OR v_total > v_max_score` の first-eligible 方式に統一。stage 判定も `v_max_score IS NOT NULL` でガード |
+| 2 | snapshot.breakdown に `max_score` / `max_score_game_title` が含まれず、plan / runbook の検証手順 (`SELECT breakdown->>'max_score_game_title'`) と矛盾していた | `supabase/migrations/20260527000005_c4_c5_quality_scoring_game_scope.sql` step 6 | 第 1 周で各 game の (total_score, breakdown) を `v_game_scores` jsonb に蓄積し、第 2 周で snapshot UPSERT 時に breakdown に `max_score` / `max_score_game_title` を含めて保存する **二段 loop** に変更。runbook の `SELECT user_id, game_title, total_score, breakdown->>'max_score_game_title'` 検証が通る形に |
+| 3 | `getMyQualityScore` / `getQualityScoreSnapshot` の `.order("total_score", desc)` のみで `.limit(1)` していたため、同点時に返る game が非決定的 | `src/lib/actions/account-actions.ts` / `src/lib/actions/admin-actions.ts` | `.order("game_title", { ascending: true })` を secondary order として追加し、DB wrapper の `ARRAY['dm', 'pokepoke']` first-eligible 順 (= ASC) と挙動を一致させる。migration コメントに「v_game_titles は ASC 順で記載 (action 側 tie-break と一致させる目的)」を追記 |
+
+**Codex 第 5 回反映の結果**:
+
+- 設計変更ゼロ、新規 RD なし。**実装側の `20260527000005` migration を 1 ファイル + actions 2 ファイルを編集**。
+- 負値スコアの取り扱いが wrapper / runner 間で一貫し、RD-C3 の MAX(score) 判定が「0 floor 付き」ではなく「真の MAX」になる。
+- snapshot breakdown に max_score / max_score_game_title が確実に含まれ、`docs/runbooks/plan_c_data_truncate.md` 内の検証 SELECT が staging / production で意図通りに動く。
+- 同点時の tie-break が DB と client 側で揃い、admin UI / account UI の表示が安定。
+- staging DB migration 適用前に修正完了。`20260527000005` migration はまだ staging に適用していないため、ファイル直接編集で問題なし (履歴の整合性は維持)。
