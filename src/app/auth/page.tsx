@@ -2,11 +2,16 @@
 
 export const dynamic = "force-dynamic";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { DEFAULT_GAME, isGameSlug, type GameSlug } from "@/lib/games";
 import { TierlogLogo } from "@/components/brand/TierlogLogo";
+import {
+  isSafeInternalPath,
+  resolveAuthRedirectTarget,
+} from "@/lib/auth/redirect";
 
 function getRedirectGame(): GameSlug {
   if (typeof window === "undefined") return DEFAULT_GAME;
@@ -23,6 +28,20 @@ function getRedirectGame(): GameSlug {
   return isGameSlug(cookieGame) ? cookieGame : DEFAULT_GAME;
 }
 
+function persistSelectedGame(game: GameSlug) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem("selectedGame", game);
+  } catch {
+    // ignore (private mode / quota exceeded)
+  }
+  try {
+    document.cookie = `selectedGame=${game}; path=/; max-age=31536000; samesite=lax`;
+  } catch {
+    // ignore
+  }
+}
+
 export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,6 +52,27 @@ export default function AuthPage() {
 
   const supabase = createClient();
 
+  const searchParams = useSearchParams();
+  const rawGame = searchParams.get("game");
+  const validatedSearchGame: GameSlug | null = isGameSlug(rawGame) ? rawGame : null;
+  const rawNext = searchParams.get("next");
+  const validatedNext = isSafeInternalPath(rawNext) ? (rawNext as string) : null;
+
+  // /auth?game=... で受け取った game を localStorage / cookie に永続化する。
+  // callback 後の redirect 先解決と、後続セッションの BottomNav 初期推定の整合を取る。
+  useEffect(() => {
+    if (validatedSearchGame) {
+      persistSelectedGame(validatedSearchGame);
+    }
+  }, [validatedSearchGame]);
+
+  // OAuth と email/password 全経路で共有する遷移先。
+  // 優先順位: 検証済 next > 検証済 game の /battle > localStorage/cookie の /battle。
+  const resolvedTarget = useMemo(() => {
+    const defaultGame = validatedSearchGame ?? getRedirectGame();
+    return resolveAuthRedirectTarget(searchParams, defaultGame);
+  }, [searchParams, validatedSearchGame]);
+
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
@@ -42,18 +82,24 @@ export default function AuthPage() {
             await supabase.auth.signOut();
             return;
           }
-          window.location.href = `/${getRedirectGame()}/battle`;
+          window.location.href = resolvedTarget;
         }
       }
     );
     return () => subscription.unsubscribe();
-  }, [supabase]);
+  }, [supabase, resolvedTarget]);
 
   const signInWithOAuth = async (provider: "google" | "twitter") => {
+    // OAuth provider を介した callback でも game / next を保持するため、
+    // 検証済の値だけを query string に付けて redirectTo を組み立てる。
+    const cbUrl = new URL("/auth/callback", window.location.origin);
+    if (validatedSearchGame) cbUrl.searchParams.set("game", validatedSearchGame);
+    if (validatedNext) cbUrl.searchParams.set("next", validatedNext);
+
     await supabase.auth.signInWithOAuth({
       provider,
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: cbUrl.toString(),
       },
     });
   };
@@ -67,7 +113,7 @@ export default function AuthPage() {
     if (error) {
       setMessage("ログインに失敗しました。メールアドレスまたはパスワードを確認してください。");
     } else {
-      window.location.href = `/${getRedirectGame()}/battle`;
+      window.location.href = resolvedTarget;
     }
   };
 
@@ -92,7 +138,7 @@ export default function AuthPage() {
     } else if (data.user?.identities?.length === 0) {
       setMessage("このメールアドレスは既に登録されています");
     } else {
-      window.location.href = `/${getRedirectGame()}/battle`;
+      window.location.href = resolvedTarget;
     }
   };
 

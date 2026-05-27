@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { syncXAccountFromAuth } from "@/lib/actions/account-actions";
 import { DEFAULT_GAME, isGameSlug, type GameSlug } from "@/lib/games";
+import { resolveAuthRedirectTarget } from "@/lib/auth/redirect";
 
 function getRedirectGame(): GameSlug {
   if (typeof window === "undefined") return DEFAULT_GAME;
@@ -20,12 +21,36 @@ function getRedirectGame(): GameSlug {
   return isGameSlug(cookieGame) ? cookieGame : DEFAULT_GAME;
 }
 
+function persistSelectedGame(game: GameSlug) {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.setItem("selectedGame", game);
+  } catch {
+    // ignore (private mode / quota exceeded)
+  }
+  try {
+    document.cookie = `selectedGame=${game}; path=/; max-age=31536000; samesite=lax`;
+  } catch {
+    // ignore
+  }
+}
+
 export default function AuthCallbackPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
     const supabase = createClient();
     const searchParams = new URLSearchParams(window.location.search);
+
+    // OAuth provider 経由の callback では /auth から受けた game / next が query に乗る。
+    // callback URL は外部からも叩けるため、受信側でも必ず再検証する。
+    const rawGame = searchParams.get("game");
+    const validatedSearchGame: GameSlug | null = isGameSlug(rawGame) ? rawGame : null;
+    if (validatedSearchGame) {
+      persistSelectedGame(validatedSearchGame);
+    }
+    const defaultGame: GameSlug = validatedSearchGame ?? getRedirectGame();
+    const resolvedTarget = resolveAuthRedirectTarget(searchParams, defaultGame);
 
     // linkIdentity 完了後: ?link_x=true パラメータがある場合
     if (searchParams.get("link_x") === "true") {
@@ -85,7 +110,7 @@ export default function AuthCallbackPage() {
             return;
           }
           await syncXAccountFromAuth();
-          window.location.href = `/${getRedirectGame()}/battle`;
+          window.location.href = resolvedTarget;
         }
         if (event === "PASSWORD_RECOVERY" && session) {
           window.location.href = "/account";
@@ -97,7 +122,7 @@ export default function AuthCallbackPage() {
     const timeout = setTimeout(async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        window.location.href = `/${getRedirectGame()}/battle`;
+        window.location.href = resolvedTarget;
       } else {
         setError("ログインに失敗しました。もう一度お試しください。");
       }

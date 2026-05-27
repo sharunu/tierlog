@@ -33,7 +33,7 @@ export function OpponentDeckStatsSection({ stats, startDate, endDate, scope, tea
     }
     if (premiumFilter) params.set("premium", "1");
     const qs = params.toString();
-    router.push(`/stats/opponent/${encodeURIComponent(deckName)}${qs ? "?" + qs : ""}`);
+    router.push(`/${game}/stats/opponent/${encodeURIComponent(deckName)}${qs ? "?" + qs : ""}`);
   };
 
   return (

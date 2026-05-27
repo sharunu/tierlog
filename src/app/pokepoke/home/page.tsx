@@ -197,7 +197,7 @@ function HomePageInner() {
 
   const handleMemberTap = (teamId: string, member: TeamMemberSummary) => {
     setActiveTeamId(teamId);
-    router.push(`/stats?scope=team&member=${member.user_id}`);
+    router.push(`/pokepoke/stats?scope=team&member=${member.user_id}`);
   };
 
   const discordStatus = searchParams.get("discord");

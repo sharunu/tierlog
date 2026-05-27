@@ -36,7 +36,7 @@ export function MyDeckStatsSection({ stats, startDate, endDate, scope, teamId, m
     }
     if (premiumFilter) params.set("premium", "1");
     const qs = params.toString();
-    router.push(`/stats/deck/${encodeURIComponent(deckName)}${qs ? "?" + qs : ""}`);
+    router.push(`/${game}/stats/deck/${encodeURIComponent(deckName)}${qs ? "?" + qs : ""}`);
   };
 
   return (

@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getUserStage } from "@/lib/actions/account-actions";
 import { Ban } from "lucide-react";
+import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 
 // BanGuard を bypass する公開ページ。
 // - /auth: ログイン画面 (未認証ユーザーの導線)
@@ -12,6 +13,27 @@ import { Ban } from "lucide-react";
 // - /contact: ログイン不要の問い合わせ窓口 (ban されたユーザーも到達できる必要あり)
 // - /share: 共有 OG ページ (匿名アクセス想定)
 const EXCLUDED_PATHS = ["/auth", "/terms", "/privacy", "/contact", "/share"];
+
+// auth/stage 取得失敗時のリトライ遅延 (ms)。1 回目 300ms、2 回目 800ms の固定 backoff。
+const RETRY_DELAYS_MS = [300, 800] as const;
+
+function abortableSleep(ms: number, signal: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (signal.aborted) {
+      reject(new DOMException("aborted", "AbortError"));
+      return;
+    }
+    const onAbort = () => {
+      clearTimeout(timer);
+      reject(new DOMException("aborted", "AbortError"));
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener("abort", onAbort);
+      resolve();
+    }, ms);
+    signal.addEventListener("abort", onAbort, { once: true });
+  });
+}
 
 export function BanGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -29,23 +51,57 @@ export function BanGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    const controller = new AbortController();
     const supabase = createClient();
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
-      // 未認証またはanonymousセッションの場合はログイン画面へ
-      if (!user || user.is_anonymous) {
-        if (user?.is_anonymous) {
-          await supabase.auth.signOut();
+
+    const run = async () => {
+      let lastError: unknown = null;
+      for (let attempt = 0; attempt <= RETRY_DELAYS_MS.length; attempt++) {
+        if (attempt > 0) {
+          try {
+            await abortableSleep(RETRY_DELAYS_MS[attempt - 1], controller.signal);
+          } catch {
+            return;
+          }
         }
-        window.location.href = "/auth";
-        return;
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (controller.signal.aborted) return;
+
+          if (!user || user.is_anonymous) {
+            if (user?.is_anonymous) {
+              await supabase.auth.signOut();
+            }
+            window.location.href = "/auth";
+            return;
+          }
+
+          const stage = await getUserStage();
+          if (controller.signal.aborted) return;
+
+          setIsBanned(stage === 4);
+          return;
+        } catch (e) {
+          if (controller.signal.aborted) return;
+          lastError = e;
+        }
       }
-      const stage = await getUserStage();
-      setIsBanned(stage === 4);
-    });
+      // リトライ全敗 → 最終 fail-open (UX 維持)。
+      // 本当の ban / suspended / unpaid の強制は Plan D の DB/RLS/API access gate
+      // で担保するため、ここで全画面停止しない (Supabase 一時障害で全ユーザー閉塞を避ける)。
+      console.error("BanGuard auth/stage failed after retries:", lastError);
+      if (!controller.signal.aborted) {
+        setIsBanned(false);
+      }
+    };
+
+    run();
+
+    return () => controller.abort();
   }, [isExcluded]);
 
   if (isExcluded) return <>{children}</>;
-  if (isBanned === null) return null;
+  if (isBanned === null) return <LoadingSpinner />;
 
   if (isBanned) {
     const handleLogout = async () => {

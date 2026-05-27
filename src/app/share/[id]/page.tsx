@@ -6,6 +6,7 @@ import Link from "next/link";
 import { getGameMetaBySlug, normalizeGameTitle } from "@/lib/games/server";
 import { APP_BRAND } from "@/lib/games";
 import { getServerEnv } from "@/lib/cf-env";
+import { sanitizeShareImageUrl } from "@/lib/share/image-url";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -14,6 +15,7 @@ type ShareRow = {
   share_data: Record<string, unknown>;
   image_url: string | null;
   game_title: string | null;
+  user_id: string;
 };
 
 async function resolveAppUrl(): Promise<string> {
@@ -26,6 +28,23 @@ async function resolveAppUrl(): Promise<string> {
   return process.env.NEXT_PUBLIC_APP_URL ?? "";
 }
 
+function getAllowedStoragePrefix(): string | null {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!supabaseUrl) return null;
+  return `${supabaseUrl}/storage/v1/object/public/share-images/`;
+}
+
+function resolveOgImageUrl(share: ShareRow, appUrl: string, id: string): string {
+  const allowedPrefix = getAllowedStoragePrefix();
+  const safe = allowedPrefix
+    ? sanitizeShareImageUrl(share.image_url, {
+        allowedPrefix,
+        shareUserId: share.user_id,
+      })
+    : null;
+  return safe ?? `${appUrl}/api/og/${id}`;
+}
+
 async function loadShare(id: string): Promise<ShareRow | null> {
   const serviceRoleKey = await getServerEnv("SUPABASE_SERVICE_ROLE_KEY");
   if (!serviceRoleKey) return null;
@@ -36,7 +55,7 @@ async function loadShare(id: string): Promise<ShareRow | null> {
   );
   const { data } = await supabase
     .from("shares")
-    .select("share_type, share_data, image_url, game_title")
+    .select("share_type, share_data, image_url, game_title, user_id")
     .eq("id", id)
     .single();
   return (data as ShareRow | null) ?? null;
@@ -78,7 +97,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   }
 
   const appUrl = await resolveAppUrl();
-  const ogImageUrl = share.image_url ?? `${appUrl}/api/og/${id}`;
+  const ogImageUrl = resolveOgImageUrl(share, appUrl, id);
   const gameMeta = getGameMetaBySlug(share.game_title);
   const { title, description } = buildTitleAndDescription(share);
 
@@ -108,7 +127,7 @@ export default async function SharePage({ params }: Props) {
   }
 
   const appUrl = await resolveAppUrl();
-  const ogImageUrl = share.image_url ?? `${appUrl}/api/og/${id}`;
+  const ogImageUrl = resolveOgImageUrl(share, appUrl, id);
   const gameSlug = normalizeGameTitle(share.game_title);
   const gameMeta = getGameMetaBySlug(gameSlug);
   const { title, description } = buildTitleAndDescription(share);
@@ -147,7 +166,7 @@ export default async function SharePage({ params }: Props) {
             アプリで開く
           </Link>
           <Link
-            href="/auth"
+            href={`/auth?game=${gameSlug}&next=${encodeURIComponent(`/${gameSlug}/home`)}`}
             className="inline-flex flex-1 items-center justify-center rounded-xl border border-slate-700 px-5 py-3 text-sm font-semibold text-slate-200 transition hover:bg-slate-800"
           >
             ログイン / 新規登録

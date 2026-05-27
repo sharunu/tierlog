@@ -1,4 +1,4 @@
-import Link from "next/link";
+import { HomeLink } from "@/components/layout/HomeLink";
 
 export default function NotFound() {
   return (
@@ -10,12 +10,7 @@ export default function NotFound() {
             お探しのページは削除されたか、URLが間違っている可能性があります。
           </p>
         </div>
-        <Link
-          href="/home"
-          className="inline-block rounded-[10px] px-5 py-3 text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity"
-        >
-          ホームに戻る
-        </Link>
+        <HomeLink className="inline-block rounded-[10px] px-5 py-3 text-sm font-medium bg-primary text-primary-foreground hover:opacity-90 transition-opacity" />
       </div>
     </div>
   );

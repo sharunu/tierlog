@@ -2,8 +2,17 @@ import { getGameMetaBySlug } from "@/lib/games/server";
 import { ImageResponse } from "next/og";
 import { createClient } from "@supabase/supabase-js";
 import { getServerEnv } from "@/lib/cf-env";
+import { sanitizeShareImageUrl } from "@/lib/share/image-url";
 
 export const runtime = "nodejs";
+
+type ShareRow = {
+  share_type: "stats" | "deck" | "opponent";
+  share_data: Record<string, unknown>;
+  image_url: string | null;
+  game_title: string | null;
+  user_id: string;
+};
 
 const FONT_CACHE: { regular?: ArrayBuffer; bold?: ArrayBuffer } = {};
 
@@ -371,26 +380,37 @@ export async function GET(
     { auth: { persistSession: false } }
   );
 
-  const { data: share } = await supabase
+  const { data: shareData } = await supabase
     .from("shares")
-    .select("share_type, share_data, image_url, game_title")
+    .select("share_type, share_data, image_url, game_title, user_id")
     .eq("id", id)
     .single();
 
+  const share = (shareData as ShareRow | null) ?? null;
   if (!share) {
     return new Response("Not found", { status: 404 });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const storedImageUrl = (share as any).image_url as string | null | undefined;
-  if (storedImageUrl) {
-    return Response.redirect(storedImageUrl, 302);
+  // shares.image_url が Supabase Storage の share-images/<user_id>/... を指す
+  // 正規 URL の場合のみ redirect、それ以外 (外部 URL / 他 user_id 配下 / 不正形式) は
+  // null となり、次の next/og 自己生成にフォールスルー (Plan A A-1 display sanitizer)。
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const allowedPrefix = supabaseUrl
+    ? `${supabaseUrl}/storage/v1/object/public/share-images/`
+    : null;
+  const safeImageUrl = allowedPrefix
+    ? sanitizeShareImageUrl(share.image_url, {
+        allowedPrefix,
+        shareUserId: share.user_id,
+      })
+    : null;
+  if (safeImageUrl) {
+    return Response.redirect(safeImageUrl, 302);
   }
 
   const fonts = await getFonts();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const gameTitle = (share as any).game_title as string | null | undefined;
+  const gameTitle = share.game_title;
   const gameMeta = getGameMetaBySlug(gameTitle);
   const trackerName = gameMeta.trackerName;
 
