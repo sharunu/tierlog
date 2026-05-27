@@ -280,13 +280,28 @@ function withRobotsHeader(request: Request, response: Response): Response {
   const robotsValue = resolveRobotsTag(url);
   if (!robotsValue) return response;
 
-  // headers が immutable な可能性に備えて clone してから set。失敗時は new Response。
+  // 観測: response.headers.set("X-Robots-Tag", "noindex, nofollow, noarchive") の
+  // comma-separated value が dev preview 経由で "noindex" だけに切り詰められる事象を確認。
+  // Google 公式仕様 (https://developers.google.com/search/docs/crawling-indexing/robots-meta-tag)
+  // では `X-Robots-Tag: noindex, nofollow` 1 行と
+  // 複数行 `X-Robots-Tag: noindex` + `X-Robots-Tag: nofollow` を **同等**に扱うため、
+  // 同名 header を append で複数追加する形にして CDN 経路の comma split に依存しないようにする。
+  // また独立した X-Tierlog-Robots header にも同じ値を入れて、CDN による X-Robots-Tag
+  // 特有の rewrite を切り分け可能にする (運用上の debug 補助、不要なら今後削除)。
+  const values = robotsValue.split(/,\s*/).filter(Boolean);
+
+  const applyAll = (target: Headers) => {
+    target.delete("X-Robots-Tag");
+    for (const v of values) target.append("X-Robots-Tag", v);
+    target.set("X-Tierlog-Robots", robotsValue);
+  };
+
   try {
-    response.headers.set("X-Robots-Tag", robotsValue);
+    applyAll(response.headers);
     return response;
   } catch {
     const headers = new Headers(response.headers);
-    headers.set("X-Robots-Tag", robotsValue);
+    applyAll(headers);
     return new Response(response.body, {
       status: response.status,
       statusText: response.statusText,
