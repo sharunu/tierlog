@@ -293,7 +293,6 @@ function withRobotsHeader(request: Request, response: Response): Response {
   const applyAll = (target: Headers) => {
     target.delete("X-Robots-Tag");
     for (const v of values) target.append("X-Robots-Tag", v);
-    target.set("X-Tierlog-Robots", robotsValue);
   };
 
   try {

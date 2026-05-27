@@ -9,6 +9,9 @@ import { LandingHero } from "@/components/landing/LandingHero";
 // ログイン済みユーザーは「アプリを開く」CTA から /${game}/home へ 1 クリック遷移。
 // BanGuard は RD-B8 の exact match で `/` を公開除外し、hydration 後も維持する。
 
+// robots は src/app/layout.tsx の metadata で per-build env に切替済 (dev preview =
+// noindex/nofollow/noarchive、本番 = index/follow)。page.tsx で明示すると override される
+// ため、ここでは指定しない。
 export const metadata: Metadata = {
   title: "Tierlog — デュエプレ・ポケポケの対戦記録と環境分析",
   description:
@@ -27,7 +30,6 @@ export const metadata: Metadata = {
     description: "デュエプレ・ポケポケの対戦記録と環境分析",
     images: ["/og-default.png"],
   },
-  robots: { index: true, follow: true },
 };
 
 export default async function Home() {
