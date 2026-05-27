@@ -157,9 +157,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       description,
       images: [ogImageUrl],
     },
-    // Plan B RD-B5: 個人戦績スクショは検索結果に出さないが、SNS シェア OG は維持する。
-    // 共有ページから /{game}/home などへの内部リンクはクロール可能 (follow: true)。
-    robots: { index: false, follow: true },
+    // Plan B RD-B5: 本番は noindex/follow (個人戦績スクショは検索結果に出さないが、
+    // 共有ページ内の /{game}/home などへの内部リンクはクロール可能にする SNS 経由 SEO 戦略)。
+    // Codex 第 7 回 P3 #2 + RD-B1: dev preview ビルドは検索エンジンに index させない方針
+    // (host 全体 noindex/nofollow/noarchive) なので、staging build のみ follow も切る。
+    robots:
+      process.env.NEXT_PUBLIC_SUPABASE_ENV === "staging"
+        ? { index: false, follow: false, noarchive: true }
+        : { index: false, follow: true },
   };
 }
 

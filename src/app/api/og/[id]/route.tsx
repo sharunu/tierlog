@@ -544,15 +544,23 @@ async function tryPutCacheResponse(
       headers,
     });
   }
+  // RD-B10 + Codex 第 7 回 P3 #1:
+  // ctx.waitUntil に渡した Promise の rejection は try/catch では拾えない (Worker の
+  // unhandled rejection になる)。.catch を chain した Promise を waitUntil に渡し、
+  // cache 書き込み失敗は console.warn のみで吸収する (OG response 自体は壊さない)。
+  // waitUntil 不在時 (ローカル / Node) は同期書き込みに fallback、こちらは try/catch で拾える。
   try {
-    const putPromise = cache.put(request, mutable.clone());
     if (waitUntil) {
-      waitUntil(putPromise);
+      waitUntil(
+        cache.put(request, mutable.clone()).catch((e) => {
+          console.warn("OG cache put failed:", e);
+        }),
+      );
     } else {
-      await putPromise;
+      await cache.put(request, mutable.clone());
     }
   } catch (e) {
-    // cache 書き込み失敗は OG response 自体は壊さない (性能最適化レイヤなので)。
+    // 主に await fallback 経路で発火する同期 throw / rejection をカバーする。
     console.warn("OG cache put failed:", e);
   }
   return mutable;
