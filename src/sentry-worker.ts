@@ -223,6 +223,97 @@ function resolveRelease(env: SentryWorkerEnv): string {
   return env.CF_VERSION_METADATA?.id ?? "unknown";
 }
 
+// Plan B (Codex 第 6 回): next.config.ts headers() で `noindex, nofollow, noarchive` の
+// comma-separated 値が OpenNext / Cloudflare 経路で `noindex` にしか残らない事象を観測。
+// Custom Worker entry (本ファイル) で response を wrap して per-host / per-path に
+// X-Robots-Tag を強制付与する方が確実なので、こちらに統合する。
+//
+// 設計:
+// - dev preview host (固定値 RD-B1) で全 path に noindex, nofollow, noarchive
+// - /auth, /admin, /account, /api/*, /dm/*, /pokepoke/* に per-path で noindex 系
+// - root `/` には noindex 系 header を付けない (default index)
+// - 既存 response の X-Robots-Tag は上書きせず append しない (重複防止のため明示 set のみ)
+//
+// 注意:
+// - Sentry.withSentry は ExportedHandler 形式の fetch を期待する。response wrapping は
+//   handler.fetch を await した後 headers を書き換えてから返すラッパーで実装する。
+// - response.headers が immutable な場合 (Cloudflare のキャッシュ済 response 等) は
+//   new Response で wrap し直してから set。
+const DEV_PREVIEW_HOST = "dev-duepure-tracker.jianrenzhongtian7.workers.dev";
+
+function resolveRobotsTag(url: URL): string | null {
+  const isDevPreview = url.hostname === DEV_PREVIEW_HOST;
+  const path = url.pathname;
+
+  if (path === "/auth" || path.startsWith("/auth/")) {
+    return "noindex, nofollow, noarchive";
+  }
+  if (path === "/admin" || path.startsWith("/admin/")) {
+    return "noindex, nofollow";
+  }
+  if (path === "/account" || path.startsWith("/account/")) {
+    return "noindex, nofollow";
+  }
+  if (path === "/api" || path.startsWith("/api/")) {
+    return "noindex";
+  }
+  if (path === "/dm" || path.startsWith("/dm/")) {
+    return isDevPreview ? "noindex, nofollow, noarchive" : "noindex, nofollow";
+  }
+  if (path === "/pokepoke" || path.startsWith("/pokepoke/")) {
+    return isDevPreview ? "noindex, nofollow, noarchive" : "noindex, nofollow";
+  }
+  if (isDevPreview) {
+    // root / 法務 / share など dev preview の全 path に index 抑止 (RD-B1)。
+    return "noindex, nofollow, noarchive";
+  }
+  return null;
+}
+
+function withRobotsHeader(request: Request, response: Response): Response {
+  let url: URL;
+  try {
+    url = new URL(request.url);
+  } catch {
+    return response;
+  }
+  const robotsValue = resolveRobotsTag(url);
+  if (!robotsValue) return response;
+
+  // headers が immutable な可能性に備えて clone してから set。失敗時は new Response。
+  try {
+    response.headers.set("X-Robots-Tag", robotsValue);
+    return response;
+  } catch {
+    const headers = new Headers(response.headers);
+    headers.set("X-Robots-Tag", robotsValue);
+    return new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
+  }
+}
+
+// Cloudflare Workers の ExecutionContext 互換 (waitUntil / passThroughOnException)。
+// @cloudflare/workers-types を導入していないため、必要な surface のみ宣言する。
+type WorkerExecutionContext = {
+  waitUntil(promise: Promise<unknown>): void;
+  passThroughOnException(): void;
+};
+
+// ExportedHandler 互換の fetch ラッパー。handler.fetch を呼び出した後、
+// X-Robots-Tag を per-host / per-path で強制設定する。
+// Sentry.withSentry は本 wrappedFetch を渡しても withSentry 内の例外計装は維持される。
+const wrappedFetch = async (
+  request: Request,
+  env: SentryWorkerEnv,
+  ctx: WorkerExecutionContext
+): Promise<Response> => {
+  const response = await handler.fetch(request, env, ctx);
+  return withRobotsHeader(request, response);
+};
+
 export default Sentry.withSentry(
   (env: SentryWorkerEnv) => ({
     dsn: env.SENTRY_DSN,
@@ -236,6 +327,6 @@ export default Sentry.withSentry(
     beforeSend: buildBeforeSend(),
   }),
   {
-    fetch: handler.fetch,
+    fetch: wrappedFetch,
   },
 );

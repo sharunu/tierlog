@@ -477,52 +477,110 @@ async function extractIdFromRequest(
   return { id: match ? decodeURIComponent(match[1]) : null };
 }
 
+// Plan B B-2-d / RD-B10: Workers Cache API は Cloudflare runtime 専用 + ローカル / Node
+// 環境では globalThis.caches 不在。**cache 層のいかなる失敗も normal フローへ落ちる**
+// 設計にする (cache 失敗 → /og-default.png fallback ではなく、Storage redirect /
+// ImageResponse 生成へ進ませる)。
+type EdgeCache = {
+  match: (request: Request) => Promise<Response | undefined>;
+  put: (request: Request, response: Response) => Promise<void>;
+};
+
+function getEdgeCacheSafely(): EdgeCache | null {
+  try {
+    if (typeof globalThis === "undefined") return null;
+    const caches = (globalThis as { caches?: { default?: EdgeCache } }).caches;
+    return caches?.default ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function tryGetCachedResponse(
+  cache: EdgeCache,
+  request: Request
+): Promise<Response | null> {
+  try {
+    const cached = await cache.match(request);
+    if (!cached) return null;
+    // cached.headers は immutable な可能性があるため new Response で wrap してから set。
+    const hit = new Response(cached.body, cached);
+    try {
+      hit.headers.set(OG_CACHE_HEADER, "HIT");
+    } catch {
+      // headers が immutable のまま、新規 Response で再生成して set し直す。
+      const headersInit = new Headers(cached.headers);
+      headersInit.set(OG_CACHE_HEADER, "HIT");
+      return new Response(cached.body, {
+        status: cached.status,
+        statusText: cached.statusText,
+        headers: headersInit,
+      });
+    }
+    return hit;
+  } catch (e) {
+    // cache.match 失敗は normal フローへ進む (og-default fallback にはしない)。
+    console.warn("OG cache match failed:", e);
+    return null;
+  }
+}
+
+async function tryPutCacheResponse(
+  cache: EdgeCache,
+  request: Request,
+  response: Response,
+  waitUntil: ((p: Promise<unknown>) => void) | undefined
+): Promise<Response> {
+  // ImageResponse の headers が immutable な可能性があるため、新規 Response で wrap してから set。
+  let mutable = response;
+  try {
+    response.headers.set(OG_CACHE_HEADER, "MISS");
+  } catch {
+    const headers = new Headers(response.headers);
+    headers.set(OG_CACHE_HEADER, "MISS");
+    mutable = new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
+  }
+  try {
+    const putPromise = cache.put(request, mutable.clone());
+    if (waitUntil) {
+      waitUntil(putPromise);
+    } else {
+      await putPromise;
+    }
+  } catch (e) {
+    // cache 書き込み失敗は OG response 自体は壊さない (性能最適化レイヤなので)。
+    console.warn("OG cache put failed:", e);
+  }
+  return mutable;
+}
+
 export async function GET(
   request: Request,
   _ctx: { params: Promise<{ id: string }> }
 ) {
+  const cf = await getCfContextSafely();
+  const assetsBinding = cf.env?.ASSETS;
+  const waitUntil = cf.ctx?.waitUntil?.bind(cf.ctx);
+  const cache = getEdgeCacheSafely();
+
+  // Cache 層: 失敗は全て normal フローへ落ちる (og-default fallback にはしない)。
+  if (cache) {
+    const cachedHit = await tryGetCachedResponse(cache, request);
+    if (cachedHit) return cachedHit;
+  }
+
+  // 通常フロー: Storage redirect / ImageResponse 生成。
+  let response: Response;
   try {
-    const cf = await getCfContextSafely();
-    const assetsBinding = cf.env?.ASSETS;
-    const waitUntil = cf.ctx?.waitUntil?.bind(cf.ctx);
-
-    // Plan B B-2-d / RD-B10: Workers Cache API は Cloudflare runtime 専用。
-    // ローカル / Node 環境 (globalThis.caches 不在) は cache layer 全体をスキップ。
-    const cache =
-      typeof globalThis !== "undefined" && (globalThis as { caches?: { default?: Cache } }).caches?.default;
-
-    if (cache) {
-      const cached = await cache.match(request);
-      if (cached) {
-        // 注意: cached.headers は immutable な場合があるため new Response で wrap してから set。
-        const hit = new Response(cached.body, cached);
-        hit.headers.set(OG_CACHE_HEADER, "HIT");
-        return hit;
-      }
-    }
-
-    const response = await renderOgResponse(request, assetsBinding);
-
-    // 302 redirect / 404 / 500 は cache せず即返す (キャッシュ対象は ImageResponse 2xx のみ)。
-    if (cache && response.status === 200 && response.headers.get("content-type")?.includes("image")) {
-      response.headers.set(OG_CACHE_HEADER, "MISS");
-      try {
-        const putPromise = cache.put(request, response.clone());
-        if (waitUntil) {
-          waitUntil(putPromise);
-        } else {
-          await putPromise;
-        }
-      } catch (e) {
-        // cache 書き込み失敗は OG response 自体は壊さない (性能最適化レイヤなので)。
-        console.warn("OG cache put failed:", e);
-      }
-    }
-
-    return response;
+    response = await renderOgResponse(request, assetsBinding);
   } catch (e) {
     // 想定外例外時の最終 fallback (Plan B-2-c)。
     // 通常は通らない経路だが、ImageResponse 内部が throw した場合などをカバーする。
+    // **cache 層失敗ではここに来ない** (上で normal フローに戻すため)。
     console.error("OG route uncaught:", e);
     try {
       const url = new URL(request.url);
@@ -532,4 +590,15 @@ export async function GET(
       return new Response("Internal Server Error", { status: 500 });
     }
   }
+
+  // Cache 書き込み: ImageResponse 200 のみ対象 (redirect 302 / 404 / 500 は cache しない)。
+  if (
+    cache &&
+    response.status === 200 &&
+    response.headers.get("content-type")?.includes("image")
+  ) {
+    response = await tryPutCacheResponse(cache, request, response, waitUntil);
+  }
+
+  return response;
 }
