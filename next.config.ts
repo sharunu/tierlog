@@ -19,6 +19,11 @@ const csp = [
   "base-uri 'self'",
 ].join("; ");
 
+// Plan B (Codex 第 6 回 / dev preview 実測): next.config.ts headers() で
+// `X-Robots-Tag: noindex, nofollow, noarchive` のような comma-separated 値が
+// OpenNext / Cloudflare 経路で `noindex` だけに切り詰められる事象を観測。
+// X-Robots-Tag の付与は Custom Worker entry (src/sentry-worker.ts) の
+// response wrapping 側に統合した。本ファイルでは security headers のみ管理する。
 const nextConfig: NextConfig = {
   output: "standalone",
   turbopack: {},

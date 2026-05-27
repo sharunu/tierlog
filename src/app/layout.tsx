@@ -23,6 +23,14 @@ const geistMono = Geist_Mono({
 const SITE_NAME = "Tierlog";
 const SITE_DESCRIPTION = "各ゲームの対戦記録・環境分析ツール";
 
+// Plan B (Codex 第 6 回) / dev preview 実測:
+// Cloudflare 経路で X-Robots-Tag の comma-separated 値が `noindex` のみに切り詰められる事象を観測。
+// `noindex` は X-Robots-Tag header 経路で確実に伝送できることは確認済なので、
+// `nofollow` `noarchive` は `<meta name="robots">` 経由で SSR HTML に出して補完する。
+// NEXT_PUBLIC_SUPABASE_ENV は build 時 inline されるため、staging build (dev preview)
+// 限定で root レベルに `noindex, nofollow, noarchive` の meta を埋め込む。
+const IS_STAGING_BUILD = process.env.NEXT_PUBLIC_SUPABASE_ENV === "staging";
+
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"),
   title: SITE_NAME,
@@ -40,10 +48,11 @@ export const metadata: Metadata = {
     email: false,
     address: false,
   },
-  robots: {
-    index: true,
-    follow: true,
-  },
+  // 本番 build では robots を未指定 (default index、meta 不在) にする。
+  // Codex 第 6 回期待値「本番 / に header / meta なし」を厳密に満たすため。
+  robots: IS_STAGING_BUILD
+    ? { index: false, follow: false, noarchive: true }
+    : undefined,
   openGraph: {
     type: "website",
     locale: "ja_JP",

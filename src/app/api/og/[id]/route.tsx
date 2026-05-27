@@ -6,8 +6,15 @@ import {
   sanitizeShareImageUrl,
   normalizeSupabaseStoragePrefix,
 } from "@/lib/share/image-url";
+import { loadOgFonts, type AssetsFetcher } from "@/lib/og/fonts";
 
 export const runtime = "nodejs";
+
+// Plan B B-2: OG 生成失敗時の最終 fallback。public/og-default.png を 302 で返す。
+const OG_DEFAULT_PATH = "/og-default.png";
+
+// Plan B B-2-d / RD-B10: 独自ヘッダで Workers Cache hit/miss を検証する。
+const OG_CACHE_HEADER = "X-Tierlog-OG-Cache";
 
 // share page と同じ二段防御。app_settings 行が無い時間帯 (production code deploy →
 // migration 未適用) は env 由来 fallback で安全画像を出せるようにする。
@@ -35,24 +42,6 @@ type ShareRow = {
   game_title: string | null;
   user_id: string;
 };
-
-const FONT_CACHE: { regular?: ArrayBuffer; bold?: ArrayBuffer } = {};
-
-async function getFontFromGoogle(weight: 400 | 700): Promise<ArrayBuffer> {
-  const css = await fetch(
-    `https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@${weight}&display=swap`,
-    { headers: { "User-Agent": "Mozilla/5.0" } }
-  ).then((res) => res.text());
-  const match = css.match(/src: url\((.+?)\) format/);
-  if (!match) throw new Error("Font URL not found");
-  return fetch(match[1]).then((res) => res.arrayBuffer());
-}
-
-async function getFonts(): Promise<{ regular: ArrayBuffer; bold: ArrayBuffer }> {
-  if (!FONT_CACHE.regular) FONT_CACHE.regular = await getFontFromGoogle(400);
-  if (!FONT_CACHE.bold) FONT_CACHE.bold = await getFontFromGoogle(700);
-  return { regular: FONT_CACHE.regular, bold: FONT_CACHE.bold };
-}
 
 const CHIP_COLORS = ["#818cf8", "#6366f1", "#38bdf8", "#34d399", "#fbbf24", "#64748b"];
 
@@ -383,11 +372,30 @@ function renderDeckOg(d: DeckData, shareType: string, appUrl: string, trackerNam
   );
 }
 
-export async function GET(
+type CfContext = {
+  env?: { ASSETS?: AssetsFetcher };
+  ctx?: { waitUntil?: (p: Promise<unknown>) => void };
+};
+
+// Plan B B-2-d / RD-B10: getCloudflareContext は OpenNext 配下でのみ動作するため try/catch で囲む。
+async function getCfContextSafely(): Promise<CfContext> {
+  try {
+    const mod = await import("@opennextjs/cloudflare");
+    const ctx = mod.getCloudflareContext?.();
+    return (ctx ?? {}) as CfContext;
+  } catch {
+    return {};
+  }
+}
+
+async function renderOgResponse(
   request: Request,
-  { params }: { params: Promise<{ id: string }> }
-) {
-  const { id } = await params;
+  assetsBinding: AssetsFetcher | undefined
+): Promise<Response> {
+  const { id } = await extractIdFromRequest(request);
+  if (!id) {
+    return new Response("Not found", { status: 404 });
+  }
 
   const url = new URL(request.url);
   const appUrl = `${url.protocol}//${url.host}`;
@@ -434,7 +442,10 @@ export async function GET(
     return Response.redirect(safeImageUrl, 302);
   }
 
-  const fonts = await getFonts();
+  // Plan B B-2: ASSETS binding 経由でフォントを取得 (Google Fonts 廃止)。
+  // 取得失敗時は空配列 → フォントなしで render (SNS プレビューが壊れるよりは
+  // OS デフォルトに崩れた画像を出す方が好ましい)。
+  const fonts = await loadOgFonts(assetsBinding);
 
   const gameTitle = share.game_title;
   const gameMeta = getGameMetaBySlug(gameTitle);
@@ -448,12 +459,154 @@ export async function GET(
   return new ImageResponse(element, {
     width: 1200,
     height: 630,
-    fonts: [
-      { name: "NotoSansJP", data: fonts.regular, weight: 400 as const, style: "normal" as const },
-      { name: "NotoSansJP", data: fonts.bold, weight: 700 as const, style: "normal" as const },
-    ],
+    fonts,
     headers: {
       "Cache-Control": "public, max-age=604800, s-maxage=604800, immutable",
     },
   });
+}
+
+async function extractIdFromRequest(
+  request: Request
+): Promise<{ id: string | null }> {
+  // params accessor は GET 側で渡された Promise を await する想定だが、
+  // renderOgResponse は cache layer 配下から request だけ受け取るため
+  // URL から id を抽出する。/api/og/<id> 形式。
+  const url = new URL(request.url);
+  const match = url.pathname.match(/\/api\/og\/([^/]+)/);
+  return { id: match ? decodeURIComponent(match[1]) : null };
+}
+
+// Plan B B-2-d / RD-B10: Workers Cache API は Cloudflare runtime 専用 + ローカル / Node
+// 環境では globalThis.caches 不在。**cache 層のいかなる失敗も normal フローへ落ちる**
+// 設計にする (cache 失敗 → /og-default.png fallback ではなく、Storage redirect /
+// ImageResponse 生成へ進ませる)。
+type EdgeCache = {
+  match: (request: Request) => Promise<Response | undefined>;
+  put: (request: Request, response: Response) => Promise<void>;
+};
+
+function getEdgeCacheSafely(): EdgeCache | null {
+  try {
+    if (typeof globalThis === "undefined") return null;
+    const caches = (globalThis as { caches?: { default?: EdgeCache } }).caches;
+    return caches?.default ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function tryGetCachedResponse(
+  cache: EdgeCache,
+  request: Request
+): Promise<Response | null> {
+  try {
+    const cached = await cache.match(request);
+    if (!cached) return null;
+    // cached.headers は immutable な可能性があるため new Response で wrap してから set。
+    const hit = new Response(cached.body, cached);
+    try {
+      hit.headers.set(OG_CACHE_HEADER, "HIT");
+    } catch {
+      // headers が immutable のまま、新規 Response で再生成して set し直す。
+      const headersInit = new Headers(cached.headers);
+      headersInit.set(OG_CACHE_HEADER, "HIT");
+      return new Response(cached.body, {
+        status: cached.status,
+        statusText: cached.statusText,
+        headers: headersInit,
+      });
+    }
+    return hit;
+  } catch (e) {
+    // cache.match 失敗は normal フローへ進む (og-default fallback にはしない)。
+    console.warn("OG cache match failed:", e);
+    return null;
+  }
+}
+
+async function tryPutCacheResponse(
+  cache: EdgeCache,
+  request: Request,
+  response: Response,
+  waitUntil: ((p: Promise<unknown>) => void) | undefined
+): Promise<Response> {
+  // ImageResponse の headers が immutable な可能性があるため、新規 Response で wrap してから set。
+  let mutable = response;
+  try {
+    response.headers.set(OG_CACHE_HEADER, "MISS");
+  } catch {
+    const headers = new Headers(response.headers);
+    headers.set(OG_CACHE_HEADER, "MISS");
+    mutable = new Response(response.body, {
+      status: response.status,
+      statusText: response.statusText,
+      headers,
+    });
+  }
+  // RD-B10 + Codex 第 7 回 P3 #1:
+  // ctx.waitUntil に渡した Promise の rejection は try/catch では拾えない (Worker の
+  // unhandled rejection になる)。.catch を chain した Promise を waitUntil に渡し、
+  // cache 書き込み失敗は console.warn のみで吸収する (OG response 自体は壊さない)。
+  // waitUntil 不在時 (ローカル / Node) は同期書き込みに fallback、こちらは try/catch で拾える。
+  try {
+    if (waitUntil) {
+      waitUntil(
+        cache.put(request, mutable.clone()).catch((e) => {
+          console.warn("OG cache put failed:", e);
+        }),
+      );
+    } else {
+      await cache.put(request, mutable.clone());
+    }
+  } catch (e) {
+    // 主に await fallback 経路で発火する同期 throw / rejection をカバーする。
+    console.warn("OG cache put failed:", e);
+  }
+  return mutable;
+}
+
+export async function GET(
+  request: Request,
+  _ctx: { params: Promise<{ id: string }> }
+) {
+  const cf = await getCfContextSafely();
+  const assetsBinding = cf.env?.ASSETS;
+  const waitUntil = cf.ctx?.waitUntil?.bind(cf.ctx);
+  const cache = getEdgeCacheSafely();
+
+  // Cache 層: 失敗は全て normal フローへ落ちる (og-default fallback にはしない)。
+  if (cache) {
+    const cachedHit = await tryGetCachedResponse(cache, request);
+    if (cachedHit) return cachedHit;
+  }
+
+  // 通常フロー: Storage redirect / ImageResponse 生成。
+  let response: Response;
+  try {
+    response = await renderOgResponse(request, assetsBinding);
+  } catch (e) {
+    // 想定外例外時の最終 fallback (Plan B-2-c)。
+    // 通常は通らない経路だが、ImageResponse 内部が throw した場合などをカバーする。
+    // **cache 層失敗ではここに来ない** (上で normal フローに戻すため)。
+    console.error("OG route uncaught:", e);
+    try {
+      const url = new URL(request.url);
+      const fallbackUrl = `${url.protocol}//${url.host}${OG_DEFAULT_PATH}`;
+      return Response.redirect(fallbackUrl, 302);
+    } catch {
+      return new Response("Internal Server Error", { status: 500 });
+    }
+  }
+
+  // Cache 書き込み: ImageResponse 200 のみ対象 (redirect 302 / 404 / 500 は cache しない)。
+  if (
+    cache &&
+    response.status === 200 &&
+    response.headers.get("content-type")?.includes("image")
+  ) {
+    response = await tryPutCacheResponse(cache, request, response, waitUntil);
+  }
+
+  return response;
 }

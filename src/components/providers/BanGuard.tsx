@@ -8,11 +8,16 @@ import { Ban } from "lucide-react";
 import { LoadingSpinner } from "@/components/layout/LoadingSpinner";
 
 // BanGuard を bypass する公開ページ。
+// - exact `/`: Plan B B-4 で SSR ランディング化、未ログインで閲覧可能 (RD-B8)
 // - /auth: ログイン画面 (未認証ユーザーの導線)
 // - /terms, /privacy: 法務文書 (ログイン不要の閲覧)
 // - /contact: ログイン不要の問い合わせ窓口 (ban されたユーザーも到達できる必要あり)
 // - /share: 共有 OG ページ (匿名アクセス想定)
-const EXCLUDED_PATHS = ["/auth", "/terms", "/privacy", "/contact", "/share"];
+//
+// RD-B8: EXCLUDED_PATHS に `/` を単純追加すると `pathname.startsWith("/")` で
+// 全 path bypass されて BanGuard が全停止するため、root は exact match で除外する。
+const EXACT_PUBLIC_PATHS = ["/"] as const;
+const PUBLIC_PREFIXES = ["/auth", "/terms", "/privacy", "/contact", "/share"] as const;
 
 // auth/stage 取得失敗時のリトライ遅延 (ms)。1 回目 300ms、2 回目 800ms の固定 backoff。
 const RETRY_DELAYS_MS = [300, 800] as const;
@@ -39,7 +44,15 @@ export function BanGuard({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const [isBanned, setIsBanned] = useState<boolean | null>(null);
 
-  const isExcluded = EXCLUDED_PATHS.some(p => pathname.startsWith(p));
+  // RD-B8: root は exact match、それ以外は path === p || pathname.startsWith(`${p}/`) で判定。
+  // 例:
+  //   pathname = "/"          → EXACT_PUBLIC_PATHS hit (excluded)
+  //   pathname = "/auth"      → PUBLIC_PREFIXES の "/auth" と exact match (excluded)
+  //   pathname = "/auth/callback" → pathname.startsWith("/auth/") で hit (excluded)
+  //   pathname = "/dm/home"   → どの条件にも該当しない (NOT excluded)
+  const isExcluded =
+    (EXACT_PUBLIC_PATHS as readonly string[]).includes(pathname) ||
+    PUBLIC_PREFIXES.some(p => pathname === p || pathname.startsWith(`${p}/`));
 
   useEffect(() => {
     if (isExcluded) {
