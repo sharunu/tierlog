@@ -1,0 +1,86 @@
+import type { GameSlug } from "@/lib/games";
+
+// useSearchParams() (Next.js: ReadonlyURLSearchParams) と URLSearchParams (DOM 標準) の
+// 両方を引数で受けるための最小 interface。helper は mutation メソッドを呼ばない。
+export type ReadOnlySearchParamsLike = {
+  get(name: string): string | null;
+};
+
+const MAX_NEXT_LENGTH = 512;
+// \x00-\x1F は C0 制御文字、\x7F は DEL。CRLF injection / header smuggling 対策で
+// decode 後にこれらが残っていたら拒否する。ASCII escape で書くことでファイル自体が
+// binary 扱いになるのを避ける (Codex 第 3 回指摘 1)。
+const CONTROL_CHARS = /[\x00-\x1F\x7F]/;
+const SCHEME_AFTER_LEADING_SLASH = /^[a-zA-Z][a-zA-Z0-9+.\-]*:/;
+
+function isSafeCandidate(value: string): boolean {
+  if (value.length < 1) return false;
+
+  // 先頭文字検証: '/' で始まり、'//' で始まらない (protocol-relative 拒否)
+  if (value[0] !== "/") return false;
+  if (value.startsWith("//")) return false;
+
+  // backslash 拒否 (Windows path / RFC3986 違反の attack vector)
+  if (value.includes("\\")) return false;
+
+  // 制御文字拒否 (\x00-\x1F, \x7F)。CRLF injection や header smuggling 対策。
+  if (CONTROL_CHARS.test(value)) return false;
+
+  // 外部 URL / scheme 指定拒否。
+  // value は '/' で始まるので、value.slice(1) の先頭が "<scheme>:" になっていれば拒否。
+  // 例: /http://evil → rest="http://evil" → "http:" にマッチ。
+  const rest = value.slice(1);
+  if (SCHEME_AFTER_LEADING_SLASH.test(rest)) return false;
+
+  // /auth ループ防止 (= /auth?next=/auth?next=... の無限再帰防止)
+  if (
+    value === "/auth" ||
+    value.startsWith("/auth/") ||
+    value.startsWith("/auth?")
+  ) {
+    return false;
+  }
+
+  // /api 配下拒否 (API endpoint への直接遷移は意味がない)
+  if (
+    value === "/api" ||
+    value.startsWith("/api/") ||
+    value.startsWith("/api?")
+  ) {
+    return false;
+  }
+
+  return true;
+}
+
+export function isSafeInternalPath(next: string | null | undefined): boolean {
+  if (next == null) return false;
+  if (typeof next !== "string") return false;
+  if (next.length < 1 || next.length > MAX_NEXT_LENGTH) return false;
+
+  // malformed percent encoding 拒否: decodeURIComponent が URIError を throw すれば即 false。
+  // 例: "/%", "/%E0%A4%A" (3-byte UTF-8 sequence の途中切れ), "/%G0" など。
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(next);
+  } catch {
+    return false;
+  }
+
+  // decode 前後の両方で同じ検証を通す (encoded protocol-relative や encoded backslash 対策)。
+  if (!isSafeCandidate(next)) return false;
+  if (!isSafeCandidate(decoded)) return false;
+
+  return true;
+}
+
+export function resolveAuthRedirectTarget(
+  searchParams: ReadOnlySearchParamsLike,
+  defaultGame: GameSlug
+): string {
+  const next = searchParams.get("next");
+  if (isSafeInternalPath(next)) {
+    return next as string;
+  }
+  return `/${defaultGame}/battle`;
+}

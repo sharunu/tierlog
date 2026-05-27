@@ -1,7 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useEffect } from "react";
+import { HomeLink } from "@/components/layout/HomeLink";
 
 export default function Error({
   error,
@@ -30,13 +30,10 @@ export default function Error({
           >
             再読み込み
           </button>
-          <Link
-            href="/home"
+          <HomeLink
             className="rounded-[10px] px-5 py-3 text-sm font-medium bg-surface-1 hover:bg-surface-2 transition-colors"
             style={{ border: "0.5px solid var(--border)" }}
-          >
-            ホームに戻る
-          </Link>
+          />
         </div>
       </div>
     </div>

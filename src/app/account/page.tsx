@@ -94,7 +94,7 @@ export default function AccountPage() {
       await updateDisplayName(displayName.trim());
       setNameMessage("ユーザー名を更新しました");
     } catch {
-      setNameMessage("ユーザー名の更��に失敗しました");
+      setNameMessage("ユーザー名の更新に失敗しました");
     }
     setNameLoading(false);
   };

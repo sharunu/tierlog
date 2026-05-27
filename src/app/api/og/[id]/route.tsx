@@ -1,9 +1,40 @@
 import { getGameMetaBySlug } from "@/lib/games/server";
 import { ImageResponse } from "next/og";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { getServerEnv } from "@/lib/cf-env";
+import {
+  sanitizeShareImageUrl,
+  normalizeSupabaseStoragePrefix,
+} from "@/lib/share/image-url";
 
 export const runtime = "nodejs";
+
+// share page と同じ二段防御。app_settings 行が無い時間帯 (production code deploy →
+// migration 未適用) は env 由来 fallback で安全画像を出せるようにする。
+async function loadStoragePublicUrlPrefix(
+  supabase: SupabaseClient
+): Promise<string | null> {
+  try {
+    const { data } = await supabase
+      .from("app_settings")
+      .select("value")
+      .eq("key", "storage_public_url_prefix")
+      .maybeSingle();
+    const raw = (data as { value?: unknown } | null)?.value;
+    if (typeof raw === "string" && raw.length > 0) return raw;
+  } catch {
+    // ignore: env fallback に任せる
+  }
+  return null;
+}
+
+type ShareRow = {
+  share_type: "stats" | "deck" | "opponent";
+  share_data: Record<string, unknown>;
+  image_url: string | null;
+  game_title: string | null;
+  user_id: string;
+};
 
 const FONT_CACHE: { regular?: ArrayBuffer; bold?: ArrayBuffer } = {};
 
@@ -371,26 +402,41 @@ export async function GET(
     { auth: { persistSession: false } }
   );
 
-  const { data: share } = await supabase
+  const { data: shareData } = await supabase
     .from("shares")
-    .select("share_type, share_data, image_url, game_title")
+    .select("share_type, share_data, image_url, game_title, user_id")
     .eq("id", id)
     .single();
 
+  const share = (shareData as ShareRow | null) ?? null;
   if (!share) {
     return new Response("Not found", { status: 404 });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const storedImageUrl = (share as any).image_url as string | null | undefined;
-  if (storedImageUrl) {
-    return Response.redirect(storedImageUrl, 302);
+  // shares.image_url が Supabase Storage の share-images/<user_id>/... を指す
+  // 正規 URL の場合のみ redirect、それ以外 (外部 URL / 他 user_id 配下 / 不正形式) は
+  // null となり、次の next/og 自己生成にフォールスルー (Plan A A-1 display sanitizer)。
+  //
+  // app_settings.storage_public_url_prefix を一次正、NEXT_PUBLIC_SUPABASE_URL 由来の
+  // 正規化 prefix を二次 fallback として両方試す (Cloudflare staging で env trailing slash
+  // などのズレで safe URL が弾かれた回帰対策、2026-05-27)。
+  const dbPrefix = await loadStoragePublicUrlPrefix(supabase);
+  const envPrefix = normalizeSupabaseStoragePrefix(process.env.NEXT_PUBLIC_SUPABASE_URL);
+  const allowedPrefixes: string[] = [];
+  if (dbPrefix) allowedPrefixes.push(dbPrefix);
+  if (envPrefix && envPrefix !== dbPrefix) allowedPrefixes.push(envPrefix);
+
+  const safeImageUrl = sanitizeShareImageUrl(share.image_url, {
+    allowedPrefixes,
+    shareUserId: share.user_id,
+  });
+  if (safeImageUrl) {
+    return Response.redirect(safeImageUrl, 302);
   }
 
   const fonts = await getFonts();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const gameTitle = (share as any).game_title as string | null | undefined;
+  const gameTitle = share.game_title;
   const gameMeta = getGameMetaBySlug(gameTitle);
   const trackerName = gameMeta.trackerName;
 
