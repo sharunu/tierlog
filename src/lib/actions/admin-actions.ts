@@ -871,7 +871,10 @@ export async function calculateSingleUserScore(userId: string) {
     p_user_id: userId,
   });
   if (error) throw new Error(error.message);
-  return data as { total_score: number; breakdown: Record<string, number>; eligible: boolean };
+  // Plan C C-5: breakdown には rule_key=>score (number) の他に
+  // max_score (number) と max_score_game_title (string) が含まれる (RD-C3)。
+  // 表示側 (AdminUserQualityScore.tsx) で BREAKDOWN_METADATA_KEYS 除外 + typeof number ガード済。
+  return data as { total_score: number; breakdown: Record<string, number | string>; eligible: boolean };
 }
 
 // === 優良ユーザーUI表示設定 ===

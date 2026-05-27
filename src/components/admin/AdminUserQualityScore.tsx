@@ -26,10 +26,15 @@ const ruleDisplayNames: Record<string, string> = {
   admin_bonus: "管理者ボーナス",
 };
 
+// Plan C C-5: snapshot.breakdown には rule_key=>score の他に
+// max_score (number) と max_score_game_title (string) が含まれる (RD-C3)。
+// スコア内訳表示には rule_key のみを使うため、これらは表示時に除外する。
+const BREAKDOWN_METADATA_KEYS = new Set(["max_score", "max_score_game_title"]);
+
 export function AdminUserQualityScore({ userId }: { userId: string }) {
   const [snapshot, setSnapshot] = useState<{
     total_score: number;
-    breakdown: Record<string, number>;
+    breakdown: Record<string, number | string>;
     calculated_at: string;
   } | null>(null);
   const [bonus, setBonus] = useState<{
@@ -161,17 +166,21 @@ export function AdminUserQualityScore({ userId }: { userId: string }) {
               <span className="text-[13px] text-muted-foreground">/ {threshold}点</span>
             </div>
 
-            {/* 内訳 */}
+            {/* 内訳 (Plan C C-5: metadata key と非 number 値を除外) */}
             <div className="bg-surface-1 rounded-[6px] px-3 py-2 mb-3">
               <p className="text-[11px] text-muted-foreground mb-1.5">スコア内訳</p>
-              {Object.entries(snapshot.breakdown).map(([key, value]) => (
-                <div key={key} className="flex justify-between text-[12px] py-0.5">
-                  <span className="text-muted-foreground">{ruleDisplayNames[key] || key}</span>
-                  <span className={value >= 0 ? "text-success" : "text-destructive"}>
-                    {value >= 0 ? "+" : ""}{value}
-                  </span>
-                </div>
-              ))}
+              {Object.entries(snapshot.breakdown)
+                .filter((entry): entry is [string, number] =>
+                  !BREAKDOWN_METADATA_KEYS.has(entry[0]) && typeof entry[1] === "number"
+                )
+                .map(([key, value]) => (
+                  <div key={key} className="flex justify-between text-[12px] py-0.5">
+                    <span className="text-muted-foreground">{ruleDisplayNames[key] || key}</span>
+                    <span className={value >= 0 ? "text-success" : "text-destructive"}>
+                      {value >= 0 ? "+" : ""}{value}
+                    </span>
+                  </div>
+                ))}
             </div>
 
             <p className="text-[10px] text-muted-foreground">

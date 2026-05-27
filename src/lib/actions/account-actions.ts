@@ -173,7 +173,10 @@ export async function getUserStage(): Promise<number> {
 
 export async function getMyQualityScore(): Promise<{
   totalScore: number;
-  breakdown: Record<string, number>;
+  // Plan C C-5: breakdown には rule_key=>score (number) の他に
+  // max_score (number) と max_score_game_title (string) が含まれる (RD-C3)。
+  // 表示側で metadata key 除外 + typeof number ガードが必要。
+  breakdown: Record<string, number | string>;
 } | null> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -193,5 +196,5 @@ export async function getMyQualityScore(): Promise<{
     .limit(1);
   if (!data || data.length === 0) return null;
   const row = data[0];
-  return { totalScore: row.total_score, breakdown: row.breakdown as Record<string, number> };
+  return { totalScore: row.total_score, breakdown: row.breakdown as Record<string, number | string> };
 }
