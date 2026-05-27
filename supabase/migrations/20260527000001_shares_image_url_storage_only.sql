@@ -159,9 +159,17 @@ REVOKE EXECUTE ON FUNCTION public.shares_validate_image_url_trigger() FROM PUBLI
 
 -- 既存 shares_derive_image_path (BEFORE INSERT/UPDATE, alphabetical 順で d < v)
 -- が先に走って image_path を派生、その後 validate trigger が image_url を検証する。
+--
+-- UPDATE は `OF image_url, user_id` で絞る (Codex 第 3 回指摘 2 対応方針 B):
+--   plan §A-1 「変更方針」の "既存行に対する CHECK constraint は追加しない / 新規 INSERT/UPDATE
+--   のみで防御し、既存行は display sanitizer で防ぐ" 方針と整合させる。
+--   image_url / user_id を書き換えない UPDATE (例: shares.expires_at の retention 追従更新、
+--   share_data の修正、image_path の再派生) では trigger を発火させず、既存の不正 image_url
+--   が残っていてもそれらの UPDATE が失敗しないようにする。
+--   新規 INSERT は全列を対象に検証する。
 DROP TRIGGER IF EXISTS shares_validate_image_url ON public.shares;
 CREATE TRIGGER shares_validate_image_url
-BEFORE INSERT OR UPDATE ON public.shares
+BEFORE INSERT OR UPDATE OF image_url, user_id ON public.shares
 FOR EACH ROW EXECUTE FUNCTION public.shares_validate_image_url_trigger();
 
 -- =============================================================================
