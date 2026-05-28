@@ -883,6 +883,7 @@ export type Database = {
         Args: { p_auto_update?: boolean }
         Returns: Json
       }
+      account_access_state: { Args: { p_uid: string }; Returns: string }
       admin_update_opponent_deck_name_ja: {
         Args: { p_id: string; p_name_ja: string; p_is_manual?: boolean }
         Returns: Json

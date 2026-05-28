@@ -47,6 +47,24 @@ export async function GET(request: NextRequest) {
   const userId: string = stateRow.user_id;
   const game: GameSlug = isGameSlug(stateRow.game_title) ? stateRow.game_title : DEFAULT_GAME;
 
+  // Plan D / D-4: discord callback は Bearer を持たない (OAuth state 経由) ため
+  // inline で stateRow.user_id に対して account_access_state を確認する。
+  // requireBearer は Bearer が無いため使えない。stage=4 / banned ならここで打ち切り、
+  // token upsert / sync_team_membership を呼び出さない。
+  // admin 例外 (RD-D3-1) は account_access_state 関数内で担保される。
+  const { data: accessState, error: accessStateError } = await supabaseAdmin.rpc(
+    "account_access_state",
+    { p_uid: userId },
+  );
+  if (accessStateError) {
+    console.error("account_access_state error in discord callback:", accessStateError);
+    return NextResponse.redirect(new URL(`/${game}/home?discord=error`, origin));
+  }
+  if (accessState !== "active") {
+    console.warn(`discord callback rejected: user=${userId} state=${accessState ?? "unknown"}`);
+    return NextResponse.redirect(new URL(`/${game}/home?discord=error`, origin));
+  }
+
   try {
     // 2. Discord token 交換
     const tokenRes = await fetch("https://discord.com/api/v10/oauth2/token", {

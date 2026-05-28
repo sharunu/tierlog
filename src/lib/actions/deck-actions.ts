@@ -1,13 +1,15 @@
 import { createClient } from "@/lib/supabase/client";
 import { DEFAULT_GAME, type GameSlug } from "@/lib/games";
 import { stripAllWhitespace } from "@/lib/util/whitespace";
+import { AuthExpiredError } from "@/lib/errors/auth-expired-error";
 
 export async function getDecks(format: string, game: GameSlug = DEFAULT_GAME) {
   const supabase = createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return [];
+  // Plan D / D-5: UI 表示用 → AuthExpiredError
+  if (!user) throw new AuthExpiredError("getDecks");
 
   const { data } = await supabase
     .from("decks")
@@ -39,7 +41,8 @@ export async function createDeck(name: string, format: string, game: GameSlug = 
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+  // Plan D / D-5: 重要操作 → AuthExpiredError
+  if (!user) throw new AuthExpiredError("createDeck");
 
   const { data: existing } = await supabase
     .from("decks")
@@ -74,7 +77,8 @@ export async function updateDeck(id: string, name: string) {
 
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+  // Plan D / D-5: 重要操作 → AuthExpiredError
+  if (!user) throw new AuthExpiredError("updateDeck");
 
   const { data: deck } = await supabase.from("decks").select("format, game_title").eq("id", id).single();
   if (!deck) throw new Error("Deck not found");
@@ -101,7 +105,8 @@ export async function updateDeck(id: string, name: string) {
 export async function archiveDeck(id: string) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+  // Plan D / D-5: 重要操作 → AuthExpiredError
+  if (!user) throw new AuthExpiredError("archiveDeck");
 
   const { error } = await supabase
     .from("decks")

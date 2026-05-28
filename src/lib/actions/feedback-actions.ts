@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/client";
+import { AuthExpiredError } from "@/lib/errors/auth-expired-error";
 
 export async function submitFeedback(
   category: "bug" | "feature" | "other",
@@ -6,7 +7,8 @@ export async function submitFeedback(
 ): Promise<void> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("ログインが必要です");
+  // Plan D / D-5: 重要操作 → AuthExpiredError (AuthGuard が catch して /auth へ redirect)
+  if (!user) throw new AuthExpiredError("submitFeedback");
 
   const { error } = await supabase
     .from("feedback")

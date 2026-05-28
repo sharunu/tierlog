@@ -7,6 +7,7 @@ import type { DetailedPersonalStats, TrendRow } from "@/lib/actions/stats-action
 import { getDailyBattleCounts, getOpponentDeckSuggestions } from "@/lib/actions/battle-actions";
 import { getTeamMembers, getMyTeamsWithVisibility } from "@/lib/actions/team-actions";
 import type { TeamMember, TeamWithVisibility } from "@/lib/actions/team-actions";
+import { handleAuthExpiredError } from "@/lib/errors/auth-expired-error";
 import { useFormat } from "@/hooks/use-format";
 import { useDateRange } from "@/hooks/use-date-range";
 import { useActiveTeam } from "@/hooks/use-active-team";
@@ -221,6 +222,8 @@ function StatsPageInner() {
     }
 
     } catch (e) {
+      // Plan D / D-5 経路 1: AuthExpiredError なら AuthGuard で /auth redirect
+      if (handleAuthExpiredError(e)) return;
       console.error("Failed to load stats data", e);
       setError("データの読み込みに失敗しました");
     } finally {

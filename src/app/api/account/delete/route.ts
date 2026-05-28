@@ -38,7 +38,9 @@ function deriveStoragePath(row: {
 }
 
 export async function POST(request: NextRequest) {
-  const auth = await requireBearer(request);
+  // Plan D / D-4 (RD-D4-1): 退会の自由を保証するため、stage=4 (banned) でも自己削除を許可。
+  // requireActiveUser: false で明示的に opt-out。他 route のデフォルト挙動 (active 要求) は維持。
+  const auth = await requireBearer(request, { requireActiveUser: false });
   if (!auth.ok) return auth.response;
 
   const userId = auth.userId;

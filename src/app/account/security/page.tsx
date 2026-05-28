@@ -7,6 +7,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { changePassword, getAuthProvider, deleteAccount, getDisplayName } from "@/lib/actions/account-actions";
 import { BottomNav } from "@/components/layout/BottomNav";
+import { handleAuthExpiredError } from "@/lib/errors/auth-expired-error";
 
 function SecurityPageInner() {
   const router = useRouter();
@@ -39,7 +40,9 @@ function SecurityPageInner() {
         ]);
         setProvider(prov);
         setDisplayName(name);
-      } catch {
+      } catch (e) {
+        // Plan D / D-5 経路 1
+        if (handleAuthExpiredError(e)) return;
         console.error("Failed to load security data");
       } finally {
         setPageLoading(false);
@@ -85,7 +88,9 @@ function SecurityPageInner() {
       }
       setCurrentPassword("");
       setNewPassword("");
-    } catch {
+    } catch (e) {
+      // Plan D / D-5 経路 1
+      if (handleAuthExpiredError(e)) return;
       setPasswordMessage("パスワードの変更に失敗しました");
     }
     setPasswordLoading(false);
@@ -98,7 +103,10 @@ function SecurityPageInner() {
       await deleteAccount();
       await supabase.auth.signOut();
       router.push("/auth");
-    } catch {
+    } catch (e) {
+      // Plan D / D-5 経路 1: stage=4 でも account delete は許可 (RD-D4-1)、
+      // ただし session が無い場合は AuthExpiredError で /auth へ
+      if (handleAuthExpiredError(e)) return;
       setDeleteMessage("アカウントの削除に失敗しました");
     }
     setDeleteLoading(false);

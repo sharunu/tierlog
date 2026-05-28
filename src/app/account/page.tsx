@@ -10,6 +10,7 @@ import { checkIsAdmin, getPremiumUiVisible } from "@/lib/actions/admin-actions";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { ThemeToggle } from "@/components/ui/ThemeToggle";
 import { LogOut } from "lucide-react";
+import { handleAuthExpiredError } from "@/lib/errors/auth-expired-error";
 
 export default function AccountPage() {
   const router = useRouter();
@@ -55,7 +56,9 @@ export default function AccountPage() {
         setXUsername(xStatus.xUsername);
         setXSource(xStatus.source);
         setHasGoogle(googleLinked);
-      } catch {
+      } catch (e) {
+        // Plan D / D-5 経路 1
+        if (handleAuthExpiredError(e)) return;
         console.error("Failed to load account data");
       } finally {
         setPageLoading(false);
@@ -93,7 +96,9 @@ export default function AccountPage() {
     try {
       await updateDisplayName(displayName.trim());
       setNameMessage("ユーザー名を更新しました");
-    } catch {
+    } catch (e) {
+      // Plan D / D-5 経路 1
+      if (handleAuthExpiredError(e)) return;
       setNameMessage("ユーザー名の更新に失敗しました");
     }
     setNameLoading(false);
@@ -126,7 +131,9 @@ export default function AccountPage() {
       setFeedbackCategory("bug");
       setFeedbackToast("送信しました。ご意見ありがとうございます！");
       setTimeout(() => setFeedbackToast(""), 3000);
-    } catch {
+    } catch (e) {
+      // Plan D / D-5 経路 1
+      if (handleAuthExpiredError(e)) return;
       setFeedbackToast("送信に失敗しました");
       setTimeout(() => setFeedbackToast(""), 3000);
     }
@@ -175,7 +182,9 @@ export default function AccountPage() {
       } else {
         alert("X連携の解除に失敗しました");
       }
-    } catch {
+    } catch (e) {
+      // Plan D / D-5 経路 1
+      if (handleAuthExpiredError(e)) return;
       alert("X連携の解除に失敗しました");
     }
     setXLoading(false);

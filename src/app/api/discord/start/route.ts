@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { isGameSlug } from "@/lib/games";
-import { getServerEnv } from "@/lib/cf-env";
+
+import { requireBearer } from "@/lib/auth/require-bearer";
 
 export async function POST(request: NextRequest) {
   try {
@@ -18,33 +18,21 @@ export async function POST(request: NextRequest) {
     }
     const game = bodyGame;
 
-    // 2. Authorization: Bearer <jwt> で Supabase ユーザー検証
-    const authHeader = request.headers.get("authorization");
-    const jwt = authHeader?.replace("Bearer ", "");
-    if (!jwt) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    }
-
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      (await getServerEnv("SUPABASE_SERVICE_ROLE_KEY"))!,
-    );
-
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(jwt);
-    if (authError || !user) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    }
+    // 2. Plan D / D-4: requireBearer 経由に統一 (account_access_state チェック含む)。
+    // 手動 Bearer 検証から requireBearer へ寄せる。
+    const auth = await requireBearer(request);
+    if (!auth.ok) return auth.response;
 
     // 3. opportunistic cleanup（期限切れ nonce を削除）
-    await supabaseAdmin
+    await auth.supabaseAdmin
       .from("discord_oauth_states")
       .delete()
       .lt("expires_at", new Date().toISOString());
 
     // 4. nonce 生成 + INSERT
-    const { data: inserted, error: insertError } = await supabaseAdmin
+    const { data: inserted, error: insertError } = await auth.supabaseAdmin
       .from("discord_oauth_states")
-      .insert({ user_id: user.id, game_title: game })
+      .insert({ user_id: auth.userId, game_title: game })
       .select("nonce")
       .single();
 

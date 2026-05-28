@@ -6,6 +6,7 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getDiscordConnection, getMyTeamsWithVisibility, getTeamMembers, getTeamMemberSummaries, disconnectDiscord, toggleTeamVisibility, refreshGuilds } from "@/lib/actions/team-actions";
 import type { DiscordConnection, TeamWithVisibility, TeamMember, TeamMemberSummary } from "@/lib/actions/team-actions";
+import { handleAuthExpiredError } from "@/lib/errors/auth-expired-error";
 import { useActiveTeam } from "@/hooks/use-active-team";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { GameSelector } from "@/components/ui/GameSelector";
@@ -75,7 +76,9 @@ function HomePageInner() {
     }
 
     setLoading(false);
-    } catch {
+    } catch (e) {
+      // Plan D / D-5 経路 1
+      if (handleAuthExpiredError(e)) return;
       setError("データの読み込みに失敗しました");
       setLoading(false);
     }

@@ -5,6 +5,7 @@ import { InstallPrompt } from "@/components/pwa/InstallPrompt";
 import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistration";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { BanGuard } from "@/components/providers/BanGuard";
+import { AuthGuard } from "@/components/providers/AuthGuard";
 import { ThemeProvider } from "@/components/providers/ThemeProvider";
 import "./globals.css";
 
@@ -96,7 +97,7 @@ export default function RootLayout({
         <ThemeProvider>
           <ServiceWorkerRegistration />
           <InstallPrompt />
-          <ErrorBoundary><BanGuard>{children}</BanGuard></ErrorBoundary>
+          <ErrorBoundary><AuthGuard><BanGuard>{children}</BanGuard></AuthGuard></ErrorBoundary>
         </ThemeProvider>
         {cfBeaconToken && (
           <Script
