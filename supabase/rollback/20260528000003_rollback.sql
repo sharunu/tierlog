@@ -6,7 +6,8 @@
 --   - clear_my_x_connection(): 20260424000001:58-64
 --   - sync_team_membership(uuid, text, jsonb, text): 20260426005408_secdef_search_path.sql:269-314
 --   - recalculate_opponent_decks(text, text): 20260426005408:225-242
---   - auto_add_opponent_deck(text, text, text): 20260426005408:42-100
+--   - auto_add_opponent_deck: D-3 では touch しないため rollback 不要
+--     (最新定義 20260520000001_opponent_deck_update_method_changes.sql のまま温存)
 --   - run_daily_opponent_deck_batch(): D-3 では touch しないため rollback 不要
 
 -- =============================================================================
@@ -132,62 +133,6 @@ REVOKE ALL ON FUNCTION public.recalculate_opponent_decks(text, text) FROM PUBLIC
 GRANT EXECUTE ON FUNCTION public.recalculate_opponent_decks(text, text) TO authenticated;
 
 
--- =============================================================================
--- その他: auto_add_opponent_deck を Plan D 適用前 (冗長 gate なし) に戻す
--- =============================================================================
-
-CREATE OR REPLACE FUNCTION public.auto_add_opponent_deck(
-  p_deck_name text,
-  p_format text,
-  p_game_title text DEFAULT 'dm'
-)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = ''
-AS $func$
-DECLARE
-  v_mode text;
-  v_max_sort integer;
-BEGIN
-  IF auth.uid() IS NULL THEN
-    RAISE EXCEPTION 'auth required' USING ERRCODE='42501';
-  END IF;
-  IF p_deck_name IS NULL OR length(trim(p_deck_name)) = 0 OR length(p_deck_name) > 80 THEN
-    RAISE EXCEPTION 'invalid deck name' USING ERRCODE='22023';
-  END IF;
-  IF NOT EXISTS (
-    SELECT 1 FROM public.opponent_deck_settings s
-    WHERE s.format = p_format AND s.game_title = p_game_title
-  ) THEN
-    RAISE EXCEPTION 'unknown format/game combination' USING ERRCODE='22023';
-  END IF;
-
-  SELECT management_mode INTO v_mode
-  FROM public.opponent_deck_settings
-  WHERE format = p_format AND game_title = p_game_title;
-
-  UPDATE public.opponent_deck_master
-  SET last_used_at = now(),
-      is_active = CASE WHEN v_mode = 'auto' THEN true ELSE is_active END
-  WHERE name = p_deck_name
-    AND format = p_format
-    AND game_title = p_game_title;
-
-  IF FOUND THEN RETURN; END IF;
-
-  SELECT COALESCE(MAX(sort_order), 0) INTO v_max_sort
-  FROM public.opponent_deck_master
-  WHERE format = p_format AND game_title = p_game_title;
-
-  IF v_mode = 'auto' THEN
-    INSERT INTO public.opponent_deck_master (name, format, game_title, category, is_active, sort_order, last_used_at)
-    VALUES (p_deck_name, p_format, p_game_title, 'other', true, v_max_sort + 10, now());
-  ELSE
-    INSERT INTO public.opponent_deck_master (name, format, game_title, category, is_active, sort_order, last_used_at)
-    VALUES (p_deck_name, p_format, p_game_title, 'other', false, v_max_sort + 10, now());
-  END IF;
-END;
-$func$;
-REVOKE ALL ON FUNCTION public.auto_add_opponent_deck(text, text, text) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.auto_add_opponent_deck(text, text, text) TO authenticated;
+-- auto_add_opponent_deck は D-3 で touch しなかったため、本 rollback でも touch しない
+-- (最新定義 20260520000001_opponent_deck_update_method_changes.sql の挙動 = 不正名 silent return /
+--  admin mode 新規 INSERT is_active=true / REVOKE ALL = を保持)

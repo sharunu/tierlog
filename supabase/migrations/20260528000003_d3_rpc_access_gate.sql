@@ -18,8 +18,9 @@
 --     (admin は account_access_state の admin 例外で 'active' が返るので素通る)
 --   - その他:
 --     - auto_add_opponent_deck: battles INSERT trigger から呼ばれるため、battles INSERT POLICY (D-2) で
---       既に防がれる → 明示 gate 不要だが、authenticated 直呼びも可能 (CLI 等) なので冗長に入れる
---       (admin 例外で素通り、stage=4 一般ユーザーで弾く)
+--       既に防がれる → 明示 gate 不要。本 migration では touch しない。
+--       (20260520000001_opponent_deck_update_method_changes.sql の最新挙動 = 不正名 silent return /
+--        admin mode 新規 INSERT は is_active=true / authenticated EXECUTE は REVOKE 済 = を保持する)
 --
 -- 各関数のシグネチャ / 既存ロジックは出典 migration から完全保持 (CREATE OR REPLACE):
 --   - update_my_display_name(text): 20260424000001_security_hardening_additive.sql:19-25
@@ -27,7 +28,6 @@
 --   - clear_my_x_connection(): 20260424000001:58-64
 --   - sync_team_membership(uuid, text, jsonb, text): 20260426005408_secdef_search_path.sql:269-314
 --   - recalculate_opponent_decks(text, text): 20260426005408:225-242
---   - auto_add_opponent_deck(text, text, text): 20260426005408:42-100
 --
 -- 失敗時 RAISE は既存規約に合わせて ERRCODE 指定:
 --   - 'account_banned' (新規): 一般 PostgreSQL exception (SQLSTATE 'P0001' 既定)
@@ -235,73 +235,15 @@ GRANT EXECUTE ON FUNCTION public.recalculate_opponent_decks(text, text) TO authe
 
 
 -- =============================================================================
--- その他: auto_add_opponent_deck (battles trigger 経由が主、authenticated 直呼びも残す)
+-- その他: auto_add_opponent_deck は本 migration で touch しない
 -- =============================================================================
 --
--- battles INSERT trigger から呼ばれる経路は D-2 (battles INSERT POLICY の access gate) で
--- 既に防がれる。ただし、authenticated 直呼び (CLI / RPC test 等) も技術的に可能なため、
--- 関数内部にも冗長に access gate を入れる。admin 例外で素通り、stage=4 一般ユーザーで弾く。
-CREATE OR REPLACE FUNCTION public.auto_add_opponent_deck(
-  p_deck_name text,
-  p_format text,
-  p_game_title text DEFAULT 'dm'
-)
-RETURNS void
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = ''
-AS $func$
-DECLARE
-  v_uid uuid := auth.uid();
-  v_mode text;
-  v_max_sort integer;
-BEGIN
-  -- 入力検証: 認証済み・空文字 / 長すぎを拒否・format/game の組が登録済みであること
-  IF v_uid IS NULL THEN
-    RAISE EXCEPTION 'auth required' USING ERRCODE='42501';
-  END IF;
-  -- Plan D / D-3 補足: trigger 経路は D-2 で防ぐが、直呼び対策で冗長 gate
-  IF public.account_access_state(v_uid) <> 'active' THEN
-    RAISE EXCEPTION 'account_banned';
-  END IF;
-  IF p_deck_name IS NULL OR length(trim(p_deck_name)) = 0 OR length(p_deck_name) > 80 THEN
-    RAISE EXCEPTION 'invalid deck name' USING ERRCODE='22023';
-  END IF;
-  IF NOT EXISTS (
-    SELECT 1 FROM public.opponent_deck_settings s
-    WHERE s.format = p_format AND s.game_title = p_game_title
-  ) THEN
-    RAISE EXCEPTION 'unknown format/game combination' USING ERRCODE='22023';
-  END IF;
-
-  -- 管理モード取得
-  SELECT management_mode INTO v_mode
-  FROM public.opponent_deck_settings
-  WHERE format = p_format AND game_title = p_game_title;
-
-  -- 既存デッキ更新: auto モードなら is_active も true に
-  UPDATE public.opponent_deck_master
-  SET last_used_at = now(),
-      is_active = CASE WHEN v_mode = 'auto' THEN true ELSE is_active END
-  WHERE name = p_deck_name
-    AND format = p_format
-    AND game_title = p_game_title;
-
-  IF FOUND THEN RETURN; END IF;
-
-  -- 新規追加
-  SELECT COALESCE(MAX(sort_order), 0) INTO v_max_sort
-  FROM public.opponent_deck_master
-  WHERE format = p_format AND game_title = p_game_title;
-
-  IF v_mode = 'auto' THEN
-    INSERT INTO public.opponent_deck_master (name, format, game_title, category, is_active, sort_order, last_used_at)
-    VALUES (p_deck_name, p_format, p_game_title, 'other', true, v_max_sort + 10, now());
-  ELSE
-    INSERT INTO public.opponent_deck_master (name, format, game_title, category, is_active, sort_order, last_used_at)
-    VALUES (p_deck_name, p_format, p_game_title, 'other', false, v_max_sort + 10, now());
-  END IF;
-END;
-$func$;
-REVOKE ALL ON FUNCTION public.auto_add_opponent_deck(text, text, text) FROM PUBLIC, anon;
-GRANT EXECUTE ON FUNCTION public.auto_add_opponent_deck(text, text, text) TO authenticated;
+-- 理由 (Codex review P0 反映):
+--   - battles INSERT trigger 経由でのみ呼ばれ、battles INSERT POLICY (D-2) の access gate で
+--     既に stage=4 ユーザーは弾かれる
+--   - 20260513000003_auto_add_opponent_deck_revoke.sql で authenticated EXECUTE が REVOKE され、
+--     直接 RPC 呼び出し経路は閉じている (trigger の owner 権限経由のみ)
+--   - 20260520000001_opponent_deck_update_method_changes.sql で
+--     不正名 / format-game 不整合は silent RETURN、admin mode 新規 INSERT は is_active=true、
+--     REVOKE ALL FROM PUBLIC, anon, authenticated, service_role が確定している
+--   - 本 plan で関数を再定義すると上記 最新挙動を上書きするリスクがあるため、touch しない

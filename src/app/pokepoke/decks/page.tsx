@@ -7,6 +7,7 @@ import { getOpponentDeckSuggestions } from "@/lib/actions/battle-actions";
 import { useFormat } from "@/hooks/use-format";
 import { FormatSelector } from "@/components/ui/FormatSelector";
 import { DeckList } from "./DeckList";
+import { handleAuthExpiredError } from "@/lib/errors/auth-expired-error";
 
 export default function DecksPage() {
   const router = useRouter();
@@ -28,7 +29,9 @@ export default function DecksPage() {
       setDecks(d);
       setSuggestions(s);
       setLoading(false);
-    }).catch(() => {
+    }).catch((e) => {
+      // Plan D / D-5 経路 1
+      if (handleAuthExpiredError(e)) return;
       setError("データの読み込みに失敗しました");
       setLoading(false);
     });
