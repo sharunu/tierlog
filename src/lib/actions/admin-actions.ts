@@ -794,12 +794,19 @@ export async function updateQualityScoreThreshold(threshold: number) {
 export async function getQualityScoreSnapshot(userId: string) {
   await requireAdmin();
   const supabase = createClient();
+  // Plan C C-5: quality_score_snapshots は (user_id, game_title) 複合キーになったため、
+  // 全 game の snapshot から total_score 最大の row を返す (RD-C3 account-level MAX(score) と整合)。
+  // 既存 UI shape (total_score / breakdown / calculated_at) は維持。per-game 表示は Phase 2 で。
+  // game_title ASC を secondary order として追加し、同点時の戻り値を安定化
+  // (DB wrapper の ARRAY['dm', 'pokepoke'] first-eligible 順 = ASC と一致させる、Codex 第 5 回)。
   const { data } = await supabase
     .from("quality_score_snapshots")
     .select("*")
     .eq("user_id", userId)
-    .single();
-  return data;
+    .order("total_score", { ascending: false })
+    .order("game_title", { ascending: true })
+    .limit(1);
+  return data && data.length > 0 ? data[0] : null;
 }
 
 export async function getQualityAdminBonus(userId: string) {
@@ -864,7 +871,10 @@ export async function calculateSingleUserScore(userId: string) {
     p_user_id: userId,
   });
   if (error) throw new Error(error.message);
-  return data as { total_score: number; breakdown: Record<string, number>; eligible: boolean };
+  // Plan C C-5: breakdown には rule_key=>score (number) の他に
+  // max_score (number) と max_score_game_title (string) が含まれる (RD-C3)。
+  // 表示側 (AdminUserQualityScore.tsx) で BREAKDOWN_METADATA_KEYS 除外 + typeof number ガード済。
+  return data as { total_score: number; breakdown: Record<string, number | string>; eligible: boolean };
 }
 
 // === 優良ユーザーUI表示設定 ===

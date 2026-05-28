@@ -611,6 +611,7 @@ export type Database = {
         Row: {
           breakdown: Json
           calculated_at: string
+          game_title: string
           id: string
           total_score: number
           user_id: string
@@ -618,6 +619,7 @@ export type Database = {
         Insert: {
           breakdown?: Json
           calculated_at?: string
+          game_title?: string
           id?: string
           total_score?: number
           user_id: string
@@ -625,6 +627,7 @@ export type Database = {
         Update: {
           breakdown?: Json
           calculated_at?: string
+          game_title?: string
           id?: string
           total_score?: number
           user_id?: string
@@ -633,7 +636,7 @@ export type Database = {
           {
             foreignKeyName: "quality_score_snapshots_user_id_fkey"
             columns: ["user_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -862,10 +865,15 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      _calculate_quality_score_internal: {
-        Args: { p_user_id: string }
-        Returns: Json
-      }
+      _calculate_quality_score_internal:
+        | {
+            Args: { p_user_id: string }
+            Returns: Json
+          }
+        | {
+            Args: { p_game_title: string; p_user_id: string }
+            Returns: Json
+          }
       _recalculate_opponent_decks_internal: {
         Args: { p_format: string; p_game_title: string }
         Returns: undefined
@@ -900,30 +908,57 @@ export type Database = {
       clear_my_x_connection: { Args: never; Returns: undefined }
       cron_run_detection_scan: { Args: never; Returns: number }
       cron_run_quality_scoring: { Args: never; Returns: Json }
-      detect_extreme_winrate: {
-        Args: { p_params: Json }
-        Returns: {
-          details: Json
-          rule_key: string
-          user_id: string
-        }[]
-      }
-      detect_rapid_input: {
-        Args: { p_params: Json }
-        Returns: {
-          details: Json
-          rule_key: string
-          user_id: string
-        }[]
-      }
-      detect_repetitive_pattern: {
-        Args: { p_params: Json }
-        Returns: {
-          details: Json
-          rule_key: string
-          user_id: string
-        }[]
-      }
+      detect_extreme_winrate:
+        | {
+            Args: { p_params: Json }
+            Returns: {
+              details: Json
+              rule_key: string
+              user_id: string
+            }[]
+          }
+        | {
+            Args: { p_game_title: string; p_params: Json }
+            Returns: {
+              details: Json
+              rule_key: string
+              user_id: string
+            }[]
+          }
+      detect_rapid_input:
+        | {
+            Args: { p_params: Json }
+            Returns: {
+              details: Json
+              rule_key: string
+              user_id: string
+            }[]
+          }
+        | {
+            Args: { p_game_title: string; p_params: Json }
+            Returns: {
+              details: Json
+              rule_key: string
+              user_id: string
+            }[]
+          }
+      detect_repetitive_pattern:
+        | {
+            Args: { p_params: Json }
+            Returns: {
+              details: Json
+              rule_key: string
+              user_id: string
+            }[]
+          }
+        | {
+            Args: { p_game_title: string; p_params: Json }
+            Returns: {
+              details: Json
+              rule_key: string
+              user_id: string
+            }[]
+          }
       get_deck_trend_range: {
         Args: {
           p_end_date: string

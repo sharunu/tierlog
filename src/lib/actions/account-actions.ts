@@ -173,16 +173,28 @@ export async function getUserStage(): Promise<number> {
 
 export async function getMyQualityScore(): Promise<{
   totalScore: number;
-  breakdown: Record<string, number>;
+  // Plan C C-5: breakdown には rule_key=>score (number) の他に
+  // max_score (number) と max_score_game_title (string) が含まれる (RD-C3)。
+  // 表示側で metadata key 除外 + typeof number ガードが必要。
+  breakdown: Record<string, number | string>;
 } | null> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
+  // Plan C C-5: quality_score_snapshots は (user_id, game_title) 複合キーになったため、
+  // 自分の全 game snapshot から total_score 最大の row を返す (RD-C3 account-level MAX(score) と整合)。
+  // 既存戻り値 shape (totalScore / breakdown) は維持。breakdown.max_score_game_title で
+  // 最大値を出した game slug が参照可能 (per-game 表示拡張は Phase 2)。
+  // game_title ASC を secondary order として追加し、同点時の戻り値を安定化
+  // (DB wrapper の ARRAY['dm', 'pokepoke'] first-eligible 順 = ASC と一致させる、Codex 第 5 回)。
   const { data } = await supabase
     .from("quality_score_snapshots")
     .select("total_score, breakdown")
     .eq("user_id", user.id)
-    .single();
-  if (!data) return null;
-  return { totalScore: data.total_score, breakdown: data.breakdown as Record<string, number> };
+    .order("total_score", { ascending: false })
+    .order("game_title", { ascending: true })
+    .limit(1);
+  if (!data || data.length === 0) return null;
+  const row = data[0];
+  return { totalScore: row.total_score, breakdown: row.breakdown as Record<string, number | string> };
 }
