@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import { DEFAULT_GAME, isGameSlug, type GameSlug } from "@/lib/games";
 
 import { getServerEnv } from "@/lib/cf-env";
+import { isMissingFunctionError } from "@/lib/auth/require-bearer";
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -52,15 +53,25 @@ export async function GET(request: NextRequest) {
   // requireBearer は Bearer が無いため使えない。stage=4 / banned ならここで打ち切り、
   // token upsert / sync_team_membership を呼び出さない。
   // admin 例外 (RD-D3-1) は account_access_state 関数内で担保される。
+  //
+  // Plan D (Codex review 2 P1): D-1 migration が未適用の場合 (function not found) は
+  // active fallback して通す。それ以外のエラーは本来通り error redirect。
   const { data: accessState, error: accessStateError } = await supabaseAdmin.rpc(
     "account_access_state",
     { p_uid: userId },
   );
   if (accessStateError) {
-    console.error("account_access_state error in discord callback:", accessStateError);
-    return NextResponse.redirect(new URL(`/${game}/home?discord=error`, origin));
-  }
-  if (accessState !== "active") {
+    if (isMissingFunctionError(accessStateError)) {
+      console.warn(
+        "account_access_state RPC missing in discord callback (D-1 未適用?) — temporary active fallback",
+        { code: accessStateError.code, message: accessStateError.message },
+      );
+      // fallback して以下の token exchange に進む
+    } else {
+      console.error("account_access_state error in discord callback:", accessStateError);
+      return NextResponse.redirect(new URL(`/${game}/home?discord=error`, origin));
+    }
+  } else if (accessState !== "active") {
     console.warn(`discord callback rejected: user=${userId} state=${accessState ?? "unknown"}`);
     return NextResponse.redirect(new URL(`/${game}/home?discord=error`, origin));
   }

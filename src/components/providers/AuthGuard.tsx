@@ -44,6 +44,13 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
   const isRedirecting = useRef(false);
 
   useEffect(() => {
+    // Plan D / D-5 (Codex review 2 P2): pathname 変化のたびに isRedirecting をリセット。
+    // 一度 redirect 発火後に router.push('/auth') した時点で pathname が変わり effect が再実行される。
+    // ここで false に戻すことで:
+    //  - /auth に着地 → public path で skip するが、その前にリセット (再ログイン後の取りこぼし回避)
+    //  - 再ログイン後に protected path 再入 → 次回 expiry で再度 redirect 可能
+    isRedirecting.current = false;
+
     // 公開ページ (/, /auth/*, /terms, /privacy, /contact, /share/*) では AuthGuard を作動させない。
     // BanGuard と同じ excluded list を維持し、auth 系のループを避ける。
     if (isPublicPath(pathname)) return;

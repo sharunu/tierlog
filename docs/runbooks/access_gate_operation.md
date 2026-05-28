@@ -229,6 +229,50 @@ END $$;
 - D-4 (require-bearer の requireActiveUser) のみ無効化したい場合: `requireActiveUser: false` を全 route で明示
 - D-5 (AuthGuard) のみ無効化したい場合: `src/app/layout.tsx` から AuthGuard を外す (AuthExpiredError は throw されるだけになり unhandledrejection でブラウザコンソールに出るのみ)
 
+
+### 7.3 production 適用順序 (Codex review 2 P1 反映)
+
+新コードと migration の deploy 順序は以下を厳守し、`/api/discord/*` / `/api/admin/*` / `/api/account/delete` が「`account_access_state` 関数が存在しない DB を叩く」事故を避ける:
+
+```
+[Step 1] staging migration (D-1 → D-2 → D-3) 適用
+         → staging で smoke test (RLS拒否 / RPC拒否 / API 403 / AuthGuard redirect)
+[Step 2] D-1 (account_access_state 関数追加) を production DB に **先行適用** (additive expand)
+         → 既存コードからは関数が増えるだけで参照されない (=非破壊)
+         → AGENTS.md / CLAUDE.md の「コード変更を伴うマイグレーションは原則 main 反映後」の例外規定 (additive expand) に該当
+[Step 3] code (dev → main merge → Cloudflare 自動 deploy) を本番反映
+         → 新 require-bearer / discord callback / RLS / AuthGuard が稼働
+         → このとき D-1 が既に適用済なので account_access_state RPC が成功する
+[Step 4] D-2 / D-3 を production DB に適用
+         → 書き込み RLS / SECDEF 関数の access gate が有効化
+         → stage=4 ユーザーの書き込み拒否が DB レイヤでも機能開始
+```
+
+**Step 1 → Step 2 → Step 3 → Step 4 の順序を逆にしない**:
+- D-2 / D-3 を先に適用するとコード未反映の旧コード経路が SECDEF 関数の `account_banned` で壊れる
+- D-1 を後回しにすると新コードの `account_access_state` RPC が PGRST202 で失敗する (safety net 一時 fallback が発動するが、本来は順序遵守で fallback に頼らない)
+
+### 7.4 順序事故時の safety net
+
+万一 Step 3 (code deploy) が Step 2 (D-1 適用) より先に走った場合の防御として、以下を実装:
+
+- `src/lib/auth/require-bearer.ts` の `account_access_state` 呼び出しで、PostgREST `PGRST202` / "Could not find the function" / "schema cache" / "function ... does not exist" を `isMissingFunctionError()` で判定し、true なら **active fallback** で素通す (`console.warn` で warning 出力)
+- `src/app/api/discord/callback/route.ts` の inline 呼び出しでも同じ判定で fallback
+
+fallback 発動中はログに `account_access_state RPC missing (D-1 未適用?)` が出る。これが本番ログで観測されたら D-1 migration 適用漏れなので、即時適用する。fallback は **緊急時の壊れ防止用**であり、長期運用しない。
+
+### 7.5 staging dry-run チェックリスト
+
+- [ ] `\df public.account_access_state` で関数定義が見える
+- [ ] `SELECT public.account_access_state(<stage1_uid>)` → `'active'`
+- [ ] `SELECT public.account_access_state(<stage4_uid>)` → `'banned'`
+- [ ] `SELECT public.account_access_state(<admin_uid_stage4>)` → `'active'` (admin 例外)
+- [ ] stage=4 テストユーザーで `INSERT INTO battles ...` が RLS 拒否 (DO block smoke test)
+- [ ] stage=4 テストユーザーで `SELECT public.update_my_display_name('test')` が `account_banned` 例外
+- [ ] dev preview で stage=4 テストユーザーが `/dm/battle` から戦績登録 → 失敗 + AuthGuard 起動なし (banned UI は BanGuard 経由)
+- [ ] dev preview で JWT 強制 expire → AuthGuard が `/auth?next=...` redirect
+- [ ] dev preview で再ログイン → 次の JWT expiry でも AuthGuard が再度 redirect (`isRedirecting` リセット)
+
 ---
 
 ## 8. 関連ファイル

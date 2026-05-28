@@ -119,6 +119,10 @@ export async function archiveDeck(id: string) {
 
 export async function reorderDecks(deckIds: string[]) {
   const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  // Plan D / D-5 (Codex review 2 P2): 重要操作 (sort_order UPDATE) → AuthExpiredError
+  if (!user) throw new AuthExpiredError("reorderDecks");
+
   const updates = deckIds.map((id, index) =>
     supabase.from("decks").update({ sort_order: index }).eq("id", id)
   );
@@ -127,6 +131,9 @@ export async function reorderDecks(deckIds: string[]) {
 
 export async function createTuning(deckId: string, name: string) {
   const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  // Plan D / D-5 (Codex review 2 P2): 重要操作 → AuthExpiredError
+  if (!user) throw new AuthExpiredError("createTuning");
 
   const { data: dup } = await supabase
     .from("deck_tunings")
@@ -160,6 +167,9 @@ export async function createTuning(deckId: string, name: string) {
 
 export async function updateTuning(id: string, name: string) {
   const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  // Plan D / D-5 (Codex review 2 P2): 重要操作 → AuthExpiredError
+  if (!user) throw new AuthExpiredError("updateTuning");
 
   const { data: current } = await supabase.from("deck_tunings").select("deck_id").eq("id", id).single();
   if (!current) throw new Error("Tuning not found");
@@ -186,6 +196,10 @@ export async function deleteTuning(id: string) {
   // SET NULL) が NULL 化され、battles UPDATE → normalize_battle_deck_names trigger
   // 発火で過去戦績の my_deck_name / tuning_name スナップショットが破壊されるため。
   const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  // Plan D / D-5 (Codex review 2 P2): 重要操作 (論理 DELETE = UPDATE) → AuthExpiredError
+  if (!user) throw new AuthExpiredError("deleteTuning");
+
   const { error } = await supabase
     .from("deck_tunings")
     .update({ is_archived: true })

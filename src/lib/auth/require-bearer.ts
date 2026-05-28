@@ -98,18 +98,30 @@ export async function requireBearer(
       { p_uid: user.id },
     );
     if (accessStateError) {
-      return {
-        ok: false,
-        response: NextResponse.json(
-          {
-            error: "Forbidden",
-            reason: `account_access_state_error:${accessStateError.message}`,
-          },
-          { status: 403 },
-        ),
-      };
-    }
-    if (accessState !== "active") {
+      // Plan D (Codex review 2 P1): D-1 migration が未適用の DB で新コードが動いた場合、
+      // RPC は PGRST202 (function does not exist) を返す。production 反映フローは
+      // 「D-1 を additive expand として code deploy 前に先行適用」を想定 (runbook §7 参照)
+      // だが、順序事故時の安全網として function 未存在エラーだけは active fallback で素通す。
+      // それ以外のエラー (network / permission / 内部例外) は本来通り 403 で拒否する。
+      if (isMissingFunctionError(accessStateError)) {
+        console.warn(
+          "account_access_state RPC missing (D-1 未適用?) — temporary active fallback",
+          { code: accessStateError.code, message: accessStateError.message },
+        );
+        // fallback して return せず、関数末尾の return ok: true に流す
+      } else {
+        return {
+          ok: false,
+          response: NextResponse.json(
+            {
+              error: "Forbidden",
+              reason: `account_access_state_error:${accessStateError.message}`,
+            },
+            { status: 403 },
+          ),
+        };
+      }
+    } else if (accessState !== "active") {
       return {
         ok: false,
         response: NextResponse.json(
@@ -121,4 +133,22 @@ export async function requireBearer(
   }
 
   return { ok: true, userId: user.id, supabaseAdmin };
+}
+
+// Plan D (Codex review 2 P1): PostgREST が function を見つけられない時の error を判定。
+// supabase-js の PostgrestError.code は PGRST202 ("Could not find the function ... in the schema cache")
+// または P0001 / 42883 系。message ベース判定で複数経路をカバーする。
+// shape は { code?: string; message?: string; details?: string; hint?: string }
+export function isMissingFunctionError(error: {
+  code?: string | null;
+  message?: string | null;
+}): boolean {
+  if (error?.code === "PGRST202") return true;
+  const msg = error?.message ?? "";
+  if (!msg) return false;
+  // PostgREST schema cache miss / Postgres function-does-not-exist の両方をカバー
+  if (msg.includes("Could not find the function")) return true;
+  if (msg.includes("schema cache")) return true;
+  if (msg.includes("function") && msg.includes("does not exist")) return true;
+  return false;
 }
