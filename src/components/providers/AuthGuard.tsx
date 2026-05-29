@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { Suspense, useEffect, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import {
@@ -37,7 +37,14 @@ function isPublicPath(pathname: string): boolean {
   );
 }
 
-export function AuthGuard({ children }: { children: React.ReactNode }) {
+// Plan D / D-5 (build fix 2026-05-29):
+//   AuthGuard を root layout に配置したことで、全ページ (静的 prerender される /auth/callback 等を
+//   含む) のツリーに useSearchParams() が入り、static export 時に
+//   "missing-suspense-with-csr-bailout" で build が失敗した。
+//   useSearchParams を使う本体ロジックを AuthGuardWatcher に切り出し <Suspense> 境界で包むことで解消する。
+//   watcher は null を描画し、{children} は Suspense の外で通常どおり static 描画されるため
+//   SSR / SEO / 既存の redirect 挙動には影響しない。
+function AuthGuardWatcher() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -98,5 +105,16 @@ export function AuthGuard({ children }: { children: React.ReactNode }) {
     };
   }, [pathname, searchParams, router]);
 
-  return <>{children}</>;
+  return null;
+}
+
+export function AuthGuard({ children }: { children: React.ReactNode }) {
+  return (
+    <>
+      <Suspense fallback={null}>
+        <AuthGuardWatcher />
+      </Suspense>
+      {children}
+    </>
+  );
 }
