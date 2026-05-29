@@ -6,7 +6,7 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { getDiscordConnection, getMyTeamsWithVisibility, getTeamMembers, getTeamMemberSummaries, disconnectDiscord, toggleTeamVisibility, refreshGuilds } from "@/lib/actions/team-actions";
 import type { DiscordConnection, TeamWithVisibility, TeamMember, TeamMemberSummary } from "@/lib/actions/team-actions";
-import { handleAuthExpiredError } from "@/lib/errors/auth-expired-error";
+import { handleAuthExpiredError, AuthExpiredError } from "@/lib/errors/auth-expired-error";
 import { useActiveTeam } from "@/hooks/use-active-team";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { GameSelector } from "@/components/ui/GameSelector";
@@ -150,7 +150,12 @@ function HomePageInner() {
       const supabase = createClient();
       // getSession() は Bearer token 取得用 (認可判断ではない、Plan D 制約)。
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session) {
+        // Codex P2: getSession() が null = token 取得不可 (JWT 失効等)。無言 return せず
+        // Plan D / D-5 経路 1 で AuthGuard の /auth redirect に流す (押下しても無反応を解消)。
+        handleAuthExpiredError(new AuthExpiredError("discord_connect"));
+        return;
+      }
 
       const res = await fetch("/api/discord/start", {
         method: "POST",
