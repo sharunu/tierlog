@@ -9,6 +9,7 @@ import {
   type DetailRpcRow,
   type OpponentDetail,
 } from "@/lib/stats/transform";
+import { AuthExpiredError } from "@/lib/errors/auth-expired-error";
 
 // 純関数 helper (toN / toWinRate / mapDetailRow / rowToDetail) と関連型は
 // src/lib/stats/transform.ts に抽出済 (#4-a refactor、2026-05-25)。
@@ -39,7 +40,8 @@ export async function getPersonalStats(format: string = "ND") {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return [];
+  // Plan D / D-5: UI 表示用 (個人統計) → AuthExpiredError
+  if (!user) throw new AuthExpiredError("getPersonalStats");
 
   // 個人統計 RPC で opponent_deck 軸に集計 (auth.uid() で本人 battles のみ対象)。
   // 全期間表示のため p_start_date / p_end_date は null (function 側で IS NULL チェック)。
@@ -130,7 +132,8 @@ export async function getDetailedPersonalStats(
 ): Promise<DetailedPersonalStats> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { myDeckStats: [], opponentDeckStats: [], turnOrder: { ...EMPTY_TURN_ORDER } };
+  // Plan D / D-5: UI 表示用 (詳細個人統計) → AuthExpiredError
+  if (!user) throw new AuthExpiredError("getDetailedPersonalStats");
 
   // 個人統計 RPC を 3 本並列で呼び、TS 側で legacy return shape に組み立てる。
   // myDeckStats[].opponents は型定義上残るが UI で未参照のため空配列で OK。
@@ -226,7 +229,8 @@ export async function getDeckDetailStats(
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const empty: DeckDetailStats = { overall: [], overallWins: 0, overallLosses: 0, overallDraws: 0, overallTotal: 0, overallWinRate: null, tuningStats: [] };
-  if (!user) return empty;
+  // Plan D / D-5: UI 表示用 (デッキ詳細統計) → AuthExpiredError
+  if (!user) throw new AuthExpiredError("getDeckDetailStats");
 
   // 2 personal RPC (overall + by_tuning) を並列実行し TS 側で legacy return shape に組み立てる。
   // by_tuning は (tuning_name, opponent_deck_name) per row、TS で tuning_name ごとに軽くグルーピングする。
@@ -324,7 +328,8 @@ export async function getOpponentDeckDetailStats(
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const empty: OpponentDeckDetailStats = { overall: [], overallWins: 0, overallLosses: 0, overallDraws: 0, overallTotal: 0, overallWinRate: null };
-  if (!user) return empty;
+  // Plan D / D-5: UI 表示用 (対面デッキ詳細統計) → AuthExpiredError
+  if (!user) throw new AuthExpiredError("getOpponentDeckDetailStats");
 
   // personal RPC 経由で my_deck 軸の集計を取得 (legacy JS 集計の RPC 化)。
   // p_start_date / p_end_date は null 可 (function 側 IS NULL チェック) のため narrow cast。

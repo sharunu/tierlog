@@ -1,16 +1,26 @@
 import { createClient } from "@/lib/supabase/client";
+import { AuthExpiredError } from "@/lib/errors/auth-expired-error";
+
+// Plan D / D-5: if (!user) の用途別 3 分類
+//   - UI 表示用 (getEmail / getDisplayName) → throw AuthExpiredError
+//   - 重要操作 (updateDisplayName / changePassword / unlinkXAccount / deleteAccount) → throw AuthExpiredError
+//   - Optional state (getAuthProvider / hasGoogleIdentity / getXConnectionStatus / getUserStage / getMyQualityScore)
+//     → 現状維持 (null / false / "unknown" / 2 などのデフォルト値を返す)
+// getUserStage は BanGuard が fail-open 用途で呼ぶため throw に変えない (return 2 維持)。
 
 export async function getEmail(): Promise<string> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return "";
+  // Plan D / D-5: UI 表示用 → AuthExpiredError
+  if (!user) throw new AuthExpiredError("getEmail");
   return user.email ?? "";
 }
 
 export async function getDisplayName(): Promise<string> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return "";
+  // Plan D / D-5: UI 表示用 → AuthExpiredError
+  if (!user) throw new AuthExpiredError("getDisplayName");
 
   const { data } = await supabase
     .from("profiles")
@@ -24,7 +34,8 @@ export async function getDisplayName(): Promise<string> {
 export async function updateDisplayName(name: string): Promise<void> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+  // Plan D / D-5: 重要操作 → AuthExpiredError
+  if (!user) throw new AuthExpiredError("updateDisplayName");
 
   const { error } = await supabase.rpc("update_my_display_name", { p_display_name: name });
   if (error) throw error;
@@ -33,7 +44,8 @@ export async function updateDisplayName(name: string): Promise<void> {
 export async function changePassword(currentPassword: string, newPassword: string): Promise<void> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !user.email) throw new Error("Not authenticated");
+  // Plan D / D-5: 重要操作 → AuthExpiredError
+  if (!user || !user.email) throw new AuthExpiredError("changePassword");
 
   // 現在のパスワードを検証
   const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -50,6 +62,7 @@ export async function changePassword(currentPassword: string, newPassword: strin
 export async function getAuthProvider(): Promise<string> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  // Plan D / D-5: Optional state (security 画面で provider 表示用、未認証時の "unknown" は意味ある値)
   if (!user) return "unknown";
 
   // 匿名ユーザーを確実に検出
@@ -61,6 +74,7 @@ export async function getAuthProvider(): Promise<string> {
 export async function hasGoogleIdentity(): Promise<boolean> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  // Plan D / D-5: Optional state (Google identity の有無を確認、未認証時は false が意味ある)
   if (!user) return false;
   // identities が未取得/空のケースに備えて app_metadata の provider/providers も fallback で見る
   const fromIdentities = (user.identities ?? []).some((i) => i.provider === "google");
@@ -75,11 +89,12 @@ export async function deleteAccount(): Promise<void> {
   // 旧 RPC は Phase B で DROP 予定。
   // 順序: shares パス収集 → Storage list → auth.admin.deleteUser → 成功時のみ Storage 削除。
   // 呼び出し側 (security/page.tsx) は成功後に supabase.auth.signOut() + /auth リダイレクト済。
+  // Plan D / D-5: 重要操作 → AuthExpiredError (API 側は RD-D4-1 で stage=4 でも opt-out 許可)
   const supabase = createClient();
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  if (!session) throw new Error("Not authenticated");
+  if (!session) throw new AuthExpiredError("deleteAccount");
 
   const res = await fetch("/api/account/delete", {
     method: "POST",
@@ -107,6 +122,7 @@ export async function getXConnectionStatus(): Promise<{
 }> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  // Plan D / D-5: Optional state (X 連携状態取得、未認証時は無接続表示で OK)
   if (!user) return { isConnected: false, xUsername: null, source: null };
 
   const { data: profile } = await supabase
@@ -143,7 +159,8 @@ export async function syncXAccountFromAuth(): Promise<boolean> {
 export async function unlinkXAccount(): Promise<{ success: boolean; error?: string }> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { success: false, error: "not_authenticated" };
+  // Plan D / D-5: 重要操作 → AuthExpiredError
+  if (!user) throw new AuthExpiredError("unlinkXAccount");
 
   // Auth層からTwitter identityを削除
   const twitterIdentity = user.identities?.find(i => i.provider === "twitter");
@@ -165,6 +182,9 @@ export async function unlinkXAccount(): Promise<{ success: boolean; error?: stri
 export async function getUserStage(): Promise<number> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  // Plan D / D-5: Optional state を維持 (BanGuard が呼ぶ際、fail-open + retry 設計のため
+  // throw すると BanGuard の retry loop と AuthGuard redirect が二重発火する。
+  // 既存 BanGuard 側で !user ハンドリング済みのため、ここでは return 2 を維持)
   if (!user) return 2;
   const { data } = await supabase
     .from("profiles").select("stage").eq("id", user.id).single();
@@ -180,6 +200,7 @@ export async function getMyQualityScore(): Promise<{
 } | null> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  // Plan D / D-5: Optional state (quality score は未計算なら null、UI で「未計算」表示)
   if (!user) return null;
   // Plan C C-5: quality_score_snapshots は (user_id, game_title) 複合キーになったため、
   // 自分の全 game snapshot から total_score 最大の row を返す (RD-C3 account-level MAX(score) と整合)。

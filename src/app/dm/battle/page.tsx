@@ -15,6 +15,7 @@ import { useFormat } from "@/hooks/use-format";
 import { useDateRange } from "@/hooks/use-date-range";
 import { BottomNav } from "@/components/layout/BottomNav";
 import { BattleTabsView } from "@/components/battle/BattleTabsView";
+import { handleAuthExpiredError } from "@/lib/errors/auth-expired-error";
 
 type Tuning = { id: string; name: string; sort_order: number };
 type Deck = { id: string; name: string; deck_tunings?: Tuning[] };
@@ -83,7 +84,9 @@ function BattlePageInner() {
         setIsAdmin(admin);
         setInputLoading(false);
       })
-      .catch(() => {
+      .catch((e) => {
+        // Plan D / D-5 経路 1
+        if (handleAuthExpiredError(e)) return;
         setError("データの読み込みに失敗しました");
         setInputLoading(false);
       });
@@ -104,6 +107,8 @@ function BattlePageInner() {
         setHistoryLoading(false);
       })
       .catch((e) => {
+        // Plan D / D-5 経路 1
+        if (handleAuthExpiredError(e)) return;
         console.error("Failed to load battles", e);
         setError("データの読み込みに失敗しました");
         setHistoryLoading(false);
@@ -121,6 +126,8 @@ function BattlePageInner() {
         setLoadMoreLoading(false);
       })
       .catch((e) => {
+        // Plan D / D-5 経路 1
+        if (handleAuthExpiredError(e)) return;
         console.error("Failed to load more battles", e);
         setLoadMoreLoading(false);
       });

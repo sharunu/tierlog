@@ -57,6 +57,20 @@ export async function middleware(request: NextRequest) {
   if (rateLimitResponse) return rateLimitResponse;
 
   // 1) Supabase セッション更新（既存処理を維持）
+  //
+  // Plan D / D-6 (RD-D6-1): middleware session refresh は **不要判定** とする。
+  // 理由: 現状 client-side supabase-js 中心で通常の token refresh はクライアント側に任せられる。
+  // middleware に createServerClient ベースの refresh を入れると Cookie 同期・legacy redirect・
+  // rate limit・auth callback 周りに影響が出やすく blast radius が大きい。Plan D の主目的は
+  // access gate / auth expiry UX / RLS 強化であり、ここで session refresh の実質化は行わない。
+  //
+  // 下記の createServerClient() 呼び出しは **getUser() / getSession() を呼ばないため**
+  // 実質的に何もしない (Cookie の getAll/setAll を登録するだけ)。Plan A 完了時点の挙動 ==
+  // Plan D 適用後の挙動。将来 SSR で認証状態に依存するページが増えた時 (Phase 2) に
+  // 再評価する方針 (Plan D §10.B)。
+  //
+  // 完全削除しない理由: import 削除 + 関数呼び出し削除を一度に行うと再導入時の
+  // diff が大きくなる + 既存挙動 (legacy redirect / rate limit) を壊さない最小コミットを維持。
   let supabaseResponse = NextResponse.next({ request });
 
   createServerClient(

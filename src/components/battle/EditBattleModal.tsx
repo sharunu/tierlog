@@ -8,6 +8,7 @@ import { MemoSuggestionButton } from "./MemoSuggestionButton";
 import { useGame } from "@/lib/games/context";
 import { supportsDraw, type BattleResult } from "@/lib/battle/result-format";
 import { stripAllWhitespace } from "@/lib/util/whitespace";
+import { handleAuthExpiredError } from "@/lib/errors/auth-expired-error";
 
 type Tuning = { id: string; name: string; sort_order: number };
 type Deck = { id: string; name: string; deck_tunings?: Tuning[] };
@@ -175,6 +176,8 @@ export function EditBattleModal({ battle, decks, suggestions, onSave, onClose }:
         opponentMemo: opponentMemo.trim() || null,
       });
     } catch (e) {
+      // Plan D / D-5 経路 1: AuthExpiredError なら AuthGuard で /auth redirect
+      if (handleAuthExpiredError(e)) return;
       console.error(e);
       alert("保存に失敗しました");
     } finally {

@@ -3,6 +3,7 @@ import { DEFAULT_GAME, type GameSlug } from "@/lib/games";
 import type { BattleResult } from "@/lib/battle/result-format";
 import { stripAllWhitespace } from "@/lib/util/whitespace";
 import type { Database } from "@/lib/supabase/database.types";
+import { AuthExpiredError } from "@/lib/errors/auth-expired-error";
 
 type BattleUpdate = Database["public"]["Tables"]["battles"]["Update"];
 
@@ -22,7 +23,8 @@ export async function recordBattle(formData: {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+  // Plan D / D-5: 重要操作 (戦績登録) → AuthExpiredError
+  if (!user) throw new AuthExpiredError("recordBattle");
 
   const game: GameSlug = formData.game ?? DEFAULT_GAME;
 
@@ -63,7 +65,8 @@ export async function updateBattle(
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+  // Plan D / D-5: 重要操作 → AuthExpiredError
+  if (!user) throw new AuthExpiredError("updateBattle");
 
   const updateData: BattleUpdate = {};
   if (fields.result !== undefined) updateData.result = fields.result;
@@ -92,7 +95,8 @@ export async function deleteBattle(id: string) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+  // Plan D / D-5: 重要操作 → AuthExpiredError
+  if (!user) throw new AuthExpiredError("deleteBattle");
 
   const { error } = await supabase
     .from("battles")
@@ -108,7 +112,8 @@ export async function getRecentBattles(limit = 50, format: string, game: GameSlu
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return [];
+  // Plan D / D-5: UI 表示用 → AuthExpiredError
+  if (!user) throw new AuthExpiredError("getRecentBattles");
 
   const { data } = await supabase
     .from("battles")
@@ -143,7 +148,8 @@ export async function getMiniStats(format: string, sinceTimestamp?: string, game
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return null;
+  // Plan D / D-5: UI 表示用 → AuthExpiredError
+  if (!user) throw new AuthExpiredError("getMiniStats");
 
   let query = supabase
     .from("battles")
@@ -182,7 +188,8 @@ export async function getAllBattles(format: string, game: GameSlug = DEFAULT_GAM
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return [];
+  // Plan D / D-5: UI 表示用 → AuthExpiredError
+  if (!user) throw new AuthExpiredError("getAllBattles");
 
   const { data } = await supabase
     .from("battles")
@@ -198,7 +205,8 @@ export async function getAllBattles(format: string, game: GameSlug = DEFAULT_GAM
 export async function getBattlesByDateRange(format: string, startDate: string, endDate: string, game: GameSlug = DEFAULT_GAME) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
+  // Plan D / D-5: UI 表示用 → AuthExpiredError
+  if (!user) throw new AuthExpiredError("getBattlesByDateRange");
   const endPlusOne = new Date(endDate);
   endPlusOne.setDate(endPlusOne.getDate() + 1);
   const { data } = await supabase
@@ -237,7 +245,8 @@ export async function getBattlesByDateRangePaginated(
 ): Promise<{ rows: Array<Record<string, unknown>>; hasMore: boolean; nextCursor: BattleListCursor | null }> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return { rows: [], hasMore: false, nextCursor: null };
+  // Plan D / D-5: UI 表示用 → AuthExpiredError
+  if (!user) throw new AuthExpiredError("getBattlesByDateRangePaginated");
 
   const endPlusOne = new Date(endDate);
   endPlusOne.setDate(endPlusOne.getDate() + 1);
@@ -281,7 +290,8 @@ export async function getBattlesByDateRangePaginated(
 export async function hasAnyBattles(format: string, game: GameSlug = DEFAULT_GAME): Promise<boolean> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return false;
+  // Plan D / D-5: UI 表示用 (戦績有無 → onboarding 判定の前段) → AuthExpiredError
+  if (!user) throw new AuthExpiredError("hasAnyBattles");
   const { count } = await supabase
     .from("battles")
     .select("id", { count: "exact", head: true })
@@ -294,7 +304,8 @@ export async function hasAnyBattles(format: string, game: GameSlug = DEFAULT_GAM
 export async function getOpponentMemoSuggestions(opponentDeckName: string, game: GameSlug = DEFAULT_GAME): Promise<string[]> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
+  // Plan D / D-5: UI 表示用 → AuthExpiredError
+  if (!user) throw new AuthExpiredError("getOpponentMemoSuggestions");
   const { data } = await supabase
     .from("battles")
     .select("opponent_memo")
@@ -316,7 +327,8 @@ export async function getOpponentMemoSuggestions(opponentDeckName: string, game:
 export async function deleteOpponentMemoSuggestion(opponentDeckName: string, memoText: string, game: GameSlug = DEFAULT_GAME): Promise<boolean> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return false;
+  // Plan D / D-5: 重要操作 (UPDATE) → AuthExpiredError
+  if (!user) throw new AuthExpiredError("deleteOpponentMemoSuggestion");
   const { error } = await supabase
     .from("battles")
     .update({ opponent_memo: null })
@@ -330,7 +342,8 @@ export async function deleteOpponentMemoSuggestion(opponentDeckName: string, mem
 export async function getDailyBattleCounts(format: string, year: number, month: number, game: GameSlug = DEFAULT_GAME) {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return {};
+  // Plan D / D-5: UI 表示用 → AuthExpiredError
+  if (!user) throw new AuthExpiredError("getDailyBattleCounts");
   const startDate = `${year}-${String(month).padStart(2, "0")}-01`;
   const nextMonth = month === 12 ? new Date(year + 1, 0, 1) : new Date(year, month, 1);
   const endDate = nextMonth.toISOString().split("T")[0];

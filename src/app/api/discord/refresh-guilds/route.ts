@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import { DEFAULT_GAME, isGameSlug } from "@/lib/games";
 
+import { requireBearer } from "@/lib/auth/require-bearer";
 import { getServerEnv } from "@/lib/cf-env";
+
 export async function POST(request: NextRequest) {
   try {
     let bodyGame: string | undefined;
@@ -13,28 +14,16 @@ export async function POST(request: NextRequest) {
       bodyGame = undefined;
     }
     const game = isGameSlug(bodyGame) ? bodyGame : DEFAULT_GAME;
-    // Verify user via Supabase JWT in Authorization header
-    const authHeader = request.headers.get("authorization");
-    const jwt = authHeader?.replace("Bearer ", "");
-    if (!jwt) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    }
 
-    const supabaseAdmin = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      (await getServerEnv("SUPABASE_SERVICE_ROLE_KEY"))!
-    );
-
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(jwt);
-    if (authError || !user) {
-      return NextResponse.json({ error: "unauthorized" }, { status: 401 });
-    }
+    // Plan D / D-4: requireBearer 経由に統一 (account_access_state チェック含む)。
+    const auth = await requireBearer(request);
+    if (!auth.ok) return auth.response;
 
     // Get discord connection with token info
-    const { data: conn } = await supabaseAdmin
+    const { data: conn } = await auth.supabaseAdmin
       .from("discord_connections")
       .select("discord_username, access_token, refresh_token, token_expires_at")
-      .eq("user_id", user.id)
+      .eq("user_id", auth.userId)
       .eq("game_title", game)
       .maybeSingle();
 
@@ -72,7 +61,7 @@ export async function POST(request: NextRequest) {
       const tokenExpiresAt = new Date(Date.now() + tokens.expires_in * 1000).toISOString();
 
       // Update tokens in discord_connections (game_title 絞りがないと複数ゲーム連携時に他ゲームの token を上書きしてしまう)
-      await supabaseAdmin
+      await auth.supabaseAdmin
         .from("discord_connections")
         .update({
           access_token: accessToken,
@@ -80,7 +69,7 @@ export async function POST(request: NextRequest) {
           token_expires_at: tokenExpiresAt,
           updated_at: new Date().toISOString(),
         })
-        .eq("user_id", user.id)
+        .eq("user_id", auth.userId)
         .eq("game_title", game);
     }
 
@@ -95,10 +84,10 @@ export async function POST(request: NextRequest) {
       discordUsername = discordUser.global_name ?? discordUser.username;
 
       if (discordUsername !== conn.discord_username) {
-        await supabaseAdmin
+        await auth.supabaseAdmin
           .from("discord_connections")
           .update({ discord_username: discordUsername, updated_at: new Date().toISOString() })
-          .eq("user_id", user.id)
+          .eq("user_id", auth.userId)
           .eq("game_title", game);
       }
     }
@@ -120,8 +109,8 @@ export async function POST(request: NextRequest) {
     }));
 
     // Sync
-    const { error: syncError } = await supabaseAdmin.rpc("sync_team_membership", {
-      p_user_id: user.id,
+    const { error: syncError } = await auth.supabaseAdmin.rpc("sync_team_membership", {
+      p_user_id: auth.userId,
       p_discord_username: discordUsername,
       p_guilds: guildData,
       p_game_title: game,

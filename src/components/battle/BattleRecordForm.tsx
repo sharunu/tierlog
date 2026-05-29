@@ -11,6 +11,7 @@ import { Surface } from "@/components/ui/Surface";
 import { Button } from "@/components/ui/Button";
 import { supportsDraw, type BattleResult } from "@/lib/battle/result-format";
 import { stripAllWhitespace } from "@/lib/util/whitespace";
+import { handleAuthExpiredError } from "@/lib/errors/auth-expired-error";
 
 import type { Format } from "@/hooks/use-format";
 
@@ -189,6 +190,8 @@ export function BattleRecordForm({
       setMiniStats(updatedStats);
       onBattleRecorded?.();
     } catch (e) {
+      // Plan D / D-5 経路 1: AuthExpiredError なら AuthGuard で /auth redirect
+      if (handleAuthExpiredError(e)) return;
       console.error(e);
       alert("記録の保存に失敗しました");
     } finally {

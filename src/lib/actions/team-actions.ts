@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/client";
 import { DEFAULT_GAME, type GameSlug } from "@/lib/games";
+import { AuthExpiredError } from "@/lib/errors/auth-expired-error";
 
 export type DiscordConnection = {
   id: string;
@@ -24,7 +25,8 @@ export type TeamMember = {
 export async function getDiscordConnection(game: GameSlug = DEFAULT_GAME): Promise<DiscordConnection | null> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
+  // Plan D / D-5: UI 表示用 (discord 連携状態を画面表示) → AuthExpiredError
+  if (!user) throw new AuthExpiredError("getDiscordConnection");
 
   const { data } = await supabase
     .from("discord_connections")
@@ -39,7 +41,8 @@ export async function getDiscordConnection(game: GameSlug = DEFAULT_GAME): Promi
 export async function getMyTeams(game: GameSlug = DEFAULT_GAME): Promise<Team[]> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
+  // Plan D / D-5: UI 表示用 → AuthExpiredError
+  if (!user) throw new AuthExpiredError("getMyTeams");
 
   const { data: memberships } = await supabase
     .from("team_members")
@@ -62,7 +65,8 @@ export async function getMyTeams(game: GameSlug = DEFAULT_GAME): Promise<Team[]>
 export async function getMyTeamsWithVisibility(game: GameSlug = DEFAULT_GAME): Promise<TeamWithVisibility[]> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return [];
+  // Plan D / D-5: UI 表示用 → AuthExpiredError
+  if (!user) throw new AuthExpiredError("getMyTeamsWithVisibility");
 
   const { data: memberships } = await supabase
     .from("team_members")
@@ -88,7 +92,8 @@ export async function getMyTeamsWithVisibility(game: GameSlug = DEFAULT_GAME): P
 export async function toggleTeamVisibility(teamId: string, hide: boolean): Promise<boolean> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return false;
+  // Plan D / D-5: 重要操作 (UPDATE) → AuthExpiredError
+  if (!user) throw new AuthExpiredError("toggleTeamVisibility");
 
   const { error } = await supabase
     .from("team_members")
@@ -112,7 +117,8 @@ export async function getTeamMembers(teamId: string): Promise<TeamMember[]> {
 export async function disconnectDiscord(game: GameSlug = DEFAULT_GAME): Promise<boolean> {
   const supabase = createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return false;
+  // Plan D / D-5: 重要操作 (DELETE) → AuthExpiredError
+  if (!user) throw new AuthExpiredError("disconnectDiscord");
 
   // このゲームで所属するチームのメンバーシップだけ削除
   const { data: gameTeams } = await supabase

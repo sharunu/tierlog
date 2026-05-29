@@ -13,6 +13,7 @@ import {
 import { matchesQuery } from "@/lib/search/normalize";
 import { stripAllWhitespace } from "@/lib/util/whitespace";
 import { Pencil, X, Search } from "lucide-react";
+import { handleAuthExpiredError } from "@/lib/errors/auth-expired-error";
 
 type Tuning = {
   id: string;
@@ -105,6 +106,8 @@ export function DeckList({
       }
       showToast(`${cleaned}を追加しました`);
     } catch (e) {
+      // Plan D / D-5 経路 1
+      if (handleAuthExpiredError(e)) return;
       setDeckError(e instanceof Error ? e.message : "エラーが発生しました");
     } finally {
       setLoading(false);
@@ -133,6 +136,8 @@ export function DeckList({
       }
       showToast(`${name}を追加しました`);
     } catch (e) {
+      // Plan D / D-5 経路 1
+      if (handleAuthExpiredError(e)) return;
       setDeckError(e instanceof Error ? e.message : "エラーが発生しました");
     } finally {
       setLoading(false);
@@ -152,6 +157,8 @@ export function DeckList({
       );
       setEditingId(null);
     } catch (e) {
+      // Plan D / D-5 経路 1
+      if (handleAuthExpiredError(e)) return;
       setDeckError(e instanceof Error ? e.message : "エラーが発生しました");
     } finally {
       setLoading(false);
@@ -164,6 +171,8 @@ export function DeckList({
       await archiveDeck(id);
       setDecks(decks.filter((d) => d.id !== id));
     } catch (e) {
+      // Plan D / D-5 経路 1
+      if (handleAuthExpiredError(e)) return;
       console.error(e);
       alert("デッキの削除に失敗しました");
     } finally {
@@ -183,6 +192,8 @@ export function DeckList({
       } : d));
       setNewTuningName("");
     } catch (e) {
+      // Plan D / D-5 経路 1
+      if (handleAuthExpiredError(e)) return;
       setTuningError(e instanceof Error ? e.message : "エラーが発生しました");
     }
   };
@@ -198,6 +209,8 @@ export function DeckList({
       } : d));
       setEditingTuningId(null);
     } catch (e) {
+      // Plan D / D-5 経路 1
+      if (handleAuthExpiredError(e)) return;
       setTuningError(e instanceof Error ? e.message : "エラーが発生しました");
     }
   };
@@ -210,6 +223,8 @@ export function DeckList({
         deck_tunings: d.deck_tunings.filter(t => t.id !== tuningId),
       } : d));
     } catch (e) {
+      // Plan D / D-5 経路 1
+      if (handleAuthExpiredError(e)) return;
       console.error(e);
       alert("チューニングの削除に失敗しました");
     }

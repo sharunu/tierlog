@@ -4,6 +4,7 @@ import type { DetailedPersonalStats, TurnOrderSummary, OpponentDetail, TrendRow 
 import { winRate, bumpWLD, type BattleResult } from "@/lib/battle/result-format";
 import { stripAllWhitespace } from "@/lib/util/whitespace";
 import { translateDeckName } from "@/lib/pokepoke/deck-translator";
+import { AuthExpiredError } from "@/lib/errors/auth-expired-error";
 
 export class MissingNameEnError extends Error {
   constructor(deckId: string) {
@@ -26,7 +27,8 @@ async function requireAdmin() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+  // Plan D / D-5: 重要操作 (admin) → AuthExpiredError
+  if (!user) throw new AuthExpiredError("admin_requireAdmin");
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -43,6 +45,7 @@ export async function checkIsAdmin(): Promise<boolean> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+  // Plan D / D-5: Optional state (admin UI 表示判定、未認証時は false が意味ある)
   if (!user) return false;
 
   const { data: profile } = await supabase
