@@ -240,9 +240,10 @@ export function DeckList({
       </div>
 
       {decks.length === 0 ? (
-        <p className="text-center text-muted-foreground py-6 text-sm">
-          デッキを追加してください
-        </p>
+        <div className="rounded-[10px] bg-surface-1 border border-border-subtle px-4 py-6 text-center text-sm text-muted-foreground">
+          まだデッキが登録されていません。<br />
+          下の「デッキを追加」から最初のデッキを登録しましょう。
+        </div>
       ) : (
         <div className="space-y-3">
           {decks.map((deck) => (

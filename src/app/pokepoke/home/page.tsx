@@ -28,6 +28,9 @@ function HomePageInner() {
   const [refreshing, setRefreshing] = useState(false);
   const [hiddenExpanded, setHiddenExpanded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // E-4: Discord 連携系操作 (connect / disconnect / refresh / visibility) の失敗を
+  // 非ブロッキングに画面表示する。page 全体を差し替える load error (error state) とは別。
+  const [actionError, setActionError] = useState<string | null>(null);
 
   // メンバー一覧機能用state
   const [expandedTeams, setExpandedTeams] = useState<Set<string>>(new Set());
@@ -86,7 +89,7 @@ function HomePageInner() {
 
   useEffect(() => {
     // loadData は useCallback ラップ済で内部で setState 経由 fetch 反映。
-
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
   }, [loadData]);
 
@@ -142,60 +145,103 @@ function HomePageInner() {
   };
 
   const handleDiscordConnect = async () => {
-    const supabase = createClient();
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
+    setActionError(null);
+    try {
+      const supabase = createClient();
+      // getSession() は Bearer token 取得用 (認可判断ではない、Plan D 制約)。
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
 
-    const res = await fetch("/api/discord/start", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.access_token}`,
-      },
-      body: JSON.stringify({ game: "pokepoke" }),
-    });
+      const res = await fetch("/api/discord/start", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ game: "pokepoke" }),
+      });
 
-    if (!res.ok) {
-      alert("Discord 連携の開始に失敗しました。時間をおいて再試行してください。");
-      return;
+      if (!res.ok) {
+        // E-4a: alert() ブロッキング表示をやめ、非ブロッキングの inline banner に出す。
+        setActionError("Discord 連携の開始に失敗しました。時間をおいて再試行してください。");
+        return;
+      }
+
+      const { authorizeUrl } = await res.json();
+      window.location.href = authorizeUrl;
+    } catch (e) {
+      setActionError("Discord 連携の開始に失敗しました。時間をおいて再試行してください。");
+      console.error(e);
     }
-
-    const { authorizeUrl } = await res.json();
-    window.location.href = authorizeUrl;
   };
 
   const handleDisconnect = async () => {
     if (!confirm("Discord連携を解除しますか？サーバー情報も削除されます。")) return;
+    setActionError(null);
     setDisconnecting(true);
-    const ok = await disconnectDiscord("pokepoke");
-    if (ok) {
-      setConnection(null);
-      setTeams([]);
-      setActiveTeamId(null);
+    try {
+      const ok = await disconnectDiscord("pokepoke");
+      if (ok) {
+        setConnection(null);
+        setTeams([]);
+        setActiveTeamId(null);
+      } else {
+        // E-4b: 解除失敗を無言にせず surface (従来は ok=false で何も表示せず成功と誤認しうる)。
+        setActionError("Discord 連携の解除に失敗しました。時間をおいて再試行してください。");
+      }
+    } catch (e) {
+      // Plan D / D-5 経路 1: AuthExpiredError なら AuthGuard で /auth redirect
+      if (handleAuthExpiredError(e)) return;
+      setActionError("Discord 連携の解除に失敗しました。時間をおいて再試行してください。");
+      console.error(e);
+    } finally {
+      setDisconnecting(false);
     }
-    setDisconnecting(false);
   };
 
   const handleToggleVisibility = async (teamId: string, currentlyHidden: boolean) => {
     if (!currentlyHidden) {
       if (!confirm("このサーバーを非表示にすると、戦績の共有も停止されます。")) return;
     }
-    const ok = await toggleTeamVisibility(teamId, !currentlyHidden);
-    if (ok) {
-      setTeams((prev) =>
-        prev.map((t) => (t.id === teamId ? { ...t, hidden: !currentlyHidden } : t))
-      );
+    setActionError(null);
+    try {
+      const ok = await toggleTeamVisibility(teamId, !currentlyHidden);
+      if (ok) {
+        setTeams((prev) =>
+          prev.map((t) => (t.id === teamId ? { ...t, hidden: !currentlyHidden } : t))
+        );
+      } else {
+        // E-4d: 共有設定変更の失敗を surface。
+        setActionError("サーバーの共有設定の変更に失敗しました。時間をおいて再試行してください。");
+      }
+    } catch (e) {
+      if (handleAuthExpiredError(e)) return;
+      setActionError("サーバーの共有設定の変更に失敗しました。時間をおいて再試行してください。");
+      console.error(e);
     }
   };
 
   const handleManualRefresh = async () => {
+    setActionError(null);
     setRefreshing(true);
-    const ok = await refreshGuilds("pokepoke");
-    if (ok) {
-      const myTeams = await getMyTeamsWithVisibility("pokepoke");
-      setTeams(myTeams);
+    try {
+      const ok = await refreshGuilds("pokepoke");
+      if (ok) {
+        const myTeams = await getMyTeamsWithVisibility("pokepoke");
+        setTeams(myTeams);
+      } else {
+        // E-4c: refresh 失敗を surface (従来は無言)。
+        setActionError("サーバー情報の更新に失敗しました。時間をおいて再試行してください。");
+      }
+    } catch (e) {
+      // E-4c: getMyTeamsWithVisibility() は JWT 失効時に AuthExpiredError を throw する。
+      // Plan D / D-5 経路 1 で拾い AuthGuard redirect に流す (従来は経路 2 の unhandledrejection 頼みだった)。
+      if (handleAuthExpiredError(e)) return;
+      setActionError("サーバー情報の更新に失敗しました。時間をおいて再試行してください。");
+      console.error(e);
+    } finally {
+      setRefreshing(false);
     }
-    setRefreshing(false);
   };
 
   const handleMemberTap = (teamId: string, member: TeamMemberSummary) => {
@@ -372,6 +418,22 @@ function HomePageInner() {
         {discordStatus === "error" && (
           <div className="rounded-lg bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive">
             Discord連携に失敗しました。もう一度お試しください。
+          </div>
+        )}
+        {actionError && (
+          <div
+            role="alert"
+            className="rounded-lg bg-destructive/10 border border-destructive/30 px-4 py-3 text-sm text-destructive flex items-start justify-between gap-3"
+          >
+            <span>{actionError}</span>
+            <button
+              type="button"
+              onClick={() => setActionError(null)}
+              className="flex-shrink-0 text-destructive/70 hover:text-destructive transition-colors"
+              aria-label="閉じる"
+            >
+              ✕
+            </button>
           </div>
         )}
 

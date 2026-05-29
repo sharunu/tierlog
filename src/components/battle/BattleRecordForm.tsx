@@ -96,7 +96,7 @@ export function BattleRecordForm({
     const saved = localStorage.getItem(`measureSince_${format}`);
     // format 変化時に localStorage から measureSince を resolve する。
     // 外部状態 (format) 変化時の同期 setState のため effect 内が必要。
-
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMeasureSince(saved);
   }, [format]);
 
@@ -111,7 +111,7 @@ export function BattleRecordForm({
     if (!saved) {
       // localStorage に measureSince がない場合、サーバから受け取った initialMiniStats を反映。
       // 外部状態 (initialMiniStats/format) に応じた同期 setState のため effect 内が必要。
-
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setMiniStats(initialMiniStats);
     }
   }, [initialMiniStats, format]);
@@ -120,7 +120,7 @@ export function BattleRecordForm({
     const saved = localStorage.getItem(`selectedDeckSelection_${format}`);
     // format / decks 変化時、localStorage の保存値を再 resolve して selectedValue を確定。
     // 同 effect 内に setSelectedValue が複数回呼ばれるため block disable で抑制。
-
+    /* eslint-disable react-hooks/set-state-in-effect */
     if (saved) {
       const { deckId, tuningId } = parseDeckSelection(saved);
       const deck = decks.find(d => d.id === deckId);
@@ -138,7 +138,7 @@ export function BattleRecordForm({
     } else {
       setSelectedValue("");
     }
-
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [decks, format]);
 
   useEffect(() => {
@@ -153,11 +153,11 @@ export function BattleRecordForm({
       getOpponentMemoSuggestions(cleaned, game).then(setMemoSuggestions);
     } else {
       // opponentDeck がクリアされたら memo 関連 3 つを同期リセット。block disable で抑制。
-
+      /* eslint-disable react-hooks/set-state-in-effect */
       setMemoSuggestions([]);
       setShowMemo(false);
       setOpponentMemo("");
-
+      /* eslint-enable react-hooks/set-state-in-effect */
     }
   }, [opponentDeck, game]);
 
@@ -259,6 +259,29 @@ export function BattleRecordForm({
       </span>
     </button>
   );
+
+  // E-3a: deck 0 件だと deckId 空で handleSubmit が無言で何もしない (機能不全に見える) ため、
+  // フォームの代わりに「先にデッキを登録」導線を出す。全 hooks の後の early return なので hooks 順序は不変。
+  if (decks.length === 0) {
+    return (
+      <div className="space-y-4">
+        <div className="rounded-[12px] p-6 text-center space-y-4 bg-surface-1 border border-border-subtle">
+          <div className="space-y-2">
+            <h2 className="text-[18px] font-medium">まずは使用デッキを登録しましょう</h2>
+            <p className="text-sm text-muted-foreground">
+              対戦を記録するには、先に使用デッキの登録が必要です。
+            </p>
+          </div>
+          <a
+            href={`/${game}/decks`}
+            className="inline-flex items-center justify-center h-10 px-4 text-sm font-medium rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 active:scale-[0.98] transition-all"
+          >
+            デッキを登録する
+          </a>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
