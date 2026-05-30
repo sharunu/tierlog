@@ -52,7 +52,7 @@ function SecurityPageInner() {
 
     if (searchParams.get("recovery") === "true") {
       // URL searchParams から recovery フラグを検出して state に反映。
-
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setIsRecovery(true);
     }
 

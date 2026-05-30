@@ -43,6 +43,10 @@ function StatsPageInner() {
   });
   const [view, setView] = useState<View>("stats");
   const [loading, setLoading] = useState(true);
+  // E-5c: 現在データを保持している scope+view のキー。skeleton は「初回 or データソース
+  // (scope/view) 切替時」のみ出し、同一 scope+view 内の format/range/filter 変更では
+  // 前データを残して flash を抑制する (別 scope のデータ誤表示は避ける)。
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [userStage, setUserStage] = useState<number>(2);
   const [premiumFilter, setPremiumFilter] = useState(false);
@@ -53,7 +57,7 @@ function StatsPageInner() {
   useEffect(() => {
     // admin が premium UI を隠した時、ユーザーが有効化していた premiumFilter を
     // 強制 off にするガード。外部状態 (premiumUiVisible) に応じた同期 setState。
-
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!premiumUiVisible) setPremiumFilter(false);
   }, [premiumUiVisible]);
   const [isGuest, setIsGuest] = useState(false);
@@ -104,7 +108,7 @@ function StatsPageInner() {
       getTeamMembers(activeVisibleTeamId).then(setTeamMembers);
     } else {
       // activeVisibleTeamId が null になった時の同期 reset。effect 内 setState が必要。
-
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setTeamMembers([]);
     }
   }, [activeVisibleTeamId]);
@@ -114,17 +118,17 @@ function StatsPageInner() {
     if (scope !== "team" || !teamReady || visibleTeams.length === 0 || activeVisibleTeamId) return;
     // scope=team で未選択時、外部状態 (visibleTeams) から最初の共有中サーバーを仮選択する。
     // 外部状態に応じた同期 setState のため effect 内が必要。
-
+    /* eslint-disable react-hooks/set-state-in-effect */
     setActiveTeamId(visibleTeams[0].id);
     setSelectedMemberId(null);
-
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [scope, teamReady, visibleTeams, activeVisibleTeamId, setActiveTeamId]);
 
   // Reset selectedMemberId when scope changes away from team
   useEffect(() => {
     if (scope !== "team") {
       // scope が team から離れた時の同期 reset。effect 内 setState が必要。
-
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setSelectedMemberId(null);
     }
   }, [scope]);
@@ -221,6 +225,8 @@ function StatsPageInner() {
       setTrendData(t);
     }
 
+    // E-5c: 成功時に現在の scope+view を loadedKey として記録 (次回以降の flash 抑制判定に使う)。
+    setLoadedKey(`${scope}:${view}`);
     } catch (e) {
       // Plan D / D-5 経路 1: AuthExpiredError なら AuthGuard で /auth redirect
       if (handleAuthExpiredError(e)) return;
@@ -239,7 +245,7 @@ function StatsPageInner() {
   useEffect(() => {
     // loadData は useCallback ラップ済で内部で fetch 結果を state に反映する。
     // 外部状態 (format/startDate/endDate/scope 等) 変化時に再 fetch するための effect 内呼び出し。
-
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadData();
   }, [loadData]);
 
@@ -266,7 +272,9 @@ function StatsPageInner() {
       );
     }
 
-    if (loading) {
+    // E-5c: skeleton は「初回 or データソース (scope/view) 切替時」のみ。同一 scope+view 内の
+    // format/range/filter 変更では loadedKey が一致するため skeleton を出さず前データを残す。
+    if (loading && loadedKey !== `${scope}:${view}`) {
       return (
         <div className="space-y-4">
           <div className="flex justify-center py-6"><div className="animate-pulse rounded-full bg-surface-2 h-[180px] w-[180px]" /></div>

@@ -64,6 +64,13 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     description: SITE_DESCRIPTION,
   },
+  // Plan E / E-6: build marker。NEXT_PUBLIC_BUILD_SHA は prepare-cloudflare-env.sh が
+  // build 時に export する git SHA(12 桁、非 secret)。build 時 inline されるため
+  // curl で SSR HTML を取得すれば稼働ビルドの SHA が判別できる (client hook 不要 = build 安全)。
+  // 未設定 build (script を source しない場合) は "unknown"。Plan B の OG/robots meta とは別 meta。
+  other: {
+    "x-tierlog-build": process.env.NEXT_PUBLIC_BUILD_SHA ?? "unknown",
+  },
 };
 
 // 注: themeColor は OS chrome (status bar) のテーマ色を制御する metadata。

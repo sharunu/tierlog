@@ -404,9 +404,12 @@ export async function getGlobalStatsByRange(
     ...(maxStage !== undefined ? { p_max_stage: maxStage } : {}),
   };
 
-  const [{ data: myDeckData }, { data: oppDeckData }] = await Promise.all([
+  // E-5a: turn-order RPC を先頭の Promise.all に統合して 3 本並列化 (従来は別 await で直列)。
+  // turn-order の params は rpcParams と同一 (独立。p_format スコープ維持、p_game_title は足さない)。
+  const [{ data: myDeckData }, { data: oppDeckData }, { data: turnData }] = await Promise.all([
     supabase.rpc("get_global_my_deck_stats_range", rpcParams),
     supabase.rpc("get_global_opponent_deck_stats_range", rpcParams),
+    supabase.rpc("get_global_turn_order_stats_range", rpcParams),
   ]);
 
   type RpcRow = { deck_name: string; wins: number; losses: number; draws: number | null; total: number; win_rate: number | null };
@@ -429,14 +432,6 @@ export async function getGlobalStatsByRange(
     total: Number(r.total),
     winRate: r.win_rate === null ? null : Number(r.win_rate),
   }));
-
-  // Turn order aggregation via RPC
-  const { data: turnData } = await supabase.rpc("get_global_turn_order_stats_range", {
-    p_start_date: startDate,
-    p_end_date: endDate,
-    p_format: format,
-    ...(maxStage !== undefined ? { p_max_stage: maxStage } : {}),
-  });
 
   const turnRow = (turnData as { first_wins: number; first_losses: number; first_draws: number | null; second_wins: number; second_losses: number; second_draws: number | null; unknown_wins: number; unknown_losses: number; unknown_draws: number | null }[] | null)?.[0];
   const turnOrder: TurnOrderSummary = turnRow ? {
@@ -640,21 +635,20 @@ export async function getTeamStatsByRange(
 ): Promise<DetailedPersonalStats> {
   const supabase = createClient();
 
-  const [{ data: myDeckData }, { data: oppDeckData }] = await Promise.all([
-    supabase.rpc("get_team_my_deck_stats_range", {
-      p_team_id: teamId,
-      p_user_id: memberId ?? undefined,
-      p_start_date: startDate,
-      p_end_date: endDate,
-      p_format: format,
-    }),
-    supabase.rpc("get_team_opponent_deck_stats_range", {
-      p_team_id: teamId,
-      p_user_id: memberId ?? undefined,
-      p_start_date: startDate,
-      p_end_date: endDate,
-      p_format: format,
-    }),
+  // E-5a: team 版も turn-order RPC を Promise.all に統合して 3 本並列化 (従来は別 await で直列)。
+  // 3 本とも同一 params (p_format スコープ維持、p_game_title は足さない)。
+  const teamRpcParams = {
+    p_team_id: teamId,
+    p_user_id: memberId ?? undefined,
+    p_start_date: startDate,
+    p_end_date: endDate,
+    p_format: format,
+  };
+
+  const [{ data: myDeckData }, { data: oppDeckData }, { data: turnData }] = await Promise.all([
+    supabase.rpc("get_team_my_deck_stats_range", teamRpcParams),
+    supabase.rpc("get_team_opponent_deck_stats_range", teamRpcParams),
+    supabase.rpc("get_team_turn_order_stats_range", teamRpcParams),
   ]);
 
   type RpcRow = { deck_name: string; wins: number; losses: number; draws: number | null; total: number; win_rate: number | null };
@@ -677,14 +671,6 @@ export async function getTeamStatsByRange(
     total: Number(r.total),
     winRate: r.win_rate === null ? null : Number(r.win_rate),
   }));
-
-  const { data: turnData } = await supabase.rpc("get_team_turn_order_stats_range", {
-    p_team_id: teamId,
-    p_user_id: memberId ?? undefined,
-    p_start_date: startDate,
-    p_end_date: endDate,
-    p_format: format,
-  });
 
   const tr = (turnData as { first_wins: number; first_losses: number; first_draws: number | null; second_wins: number; second_losses: number; second_draws: number | null; unknown_wins: number; unknown_losses: number; unknown_draws: number | null }[] | null)?.[0];
   const turnOrder: TurnOrderSummary = {

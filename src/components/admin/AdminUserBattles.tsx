@@ -46,7 +46,7 @@ export function AdminUserBattles({ userId, format, game = DEFAULT_GAME }: Props)
   useEffect(() => {
     // loadBattles は useCallback ラップ済で内部で setState 経由 fetch 反映。
     // 外部状態 (userId/format/startDate/endDate/game) 変化時の effect 内呼び出し。
-
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     loadBattles();
   }, [loadBattles]);
 

@@ -58,10 +58,18 @@ export function BattleHistoryList({ battles, decks, suggestions, onRefresh, read
   const [editingBattle, setEditingBattle] = useState<Battle | null>(null);
 
   if (battles.length === 0) {
+    // E-3b: 空状態の文言を文脈に合わせて一貫化。ここは「全体に戦績はあるが現在の期間/フィルタで 0 件」
+    // または admin の read-only ビューで対象ユーザーの戦績が範囲内に無いケース (hasAny===false の
+    // 「最初の対戦を記録」CTA は BattleTabsView 側が担当)。readOnly では入力導線が無いため中立文言。
+    const emptyMessage = readOnly
+      ? "対戦記録がありません"
+      : deckFilterActive
+        ? "選択中のデッキの対戦記録がありません"
+        : "この期間の対戦記録がありません";
     return (
-      <p className="text-center text-muted-foreground py-12">
-        対戦履歴がありません
-      </p>
+      <div className="rounded-[12px] px-4 py-10 text-center text-sm text-muted-foreground bg-surface-1 border border-border-subtle">
+        {emptyMessage}
+      </div>
     );
   }
 

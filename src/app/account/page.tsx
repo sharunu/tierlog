@@ -75,7 +75,7 @@ export default function AccountPage() {
     // X連携エラー検知
     if (params.get("x_link_error") === "conflict") {
       // URL params から X 連携エラーを検出して state に反映。mount 時 URL resolve。
-
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setXLinkError("このXアカウントはすでに別のユーザーで使用されています");
       window.history.replaceState({}, "", "/account");
     }
